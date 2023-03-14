@@ -35,10 +35,11 @@ object Bot {
     val remainingDecrees: List<Decree>
         get() = allDecrees.filter { it.name !in state.selectedDecrees && it.name !in state.ignoredDecrees }
 
-    var state: BotState = BotState()
+    var state: BotState = if (stateFile.exists()) cbor.decodeFromByteArray(stateFile.readBytes()) else BotState()
+        get() = field.copy()
         set(value) {
-            stateFile.writeBytes(cbor.encodeToByteArray(value))
-            field = value
+            field = value.copy()
+            stateFile.writeBytes(cbor.encodeToByteArray(field))
         }
 
     init {
@@ -54,10 +55,6 @@ object Bot {
         allDecrees = listOf(
             TWOWDecree()
         )
-        // load state
-        if (stateFile.exists()) {
-            state = cbor.decodeFromByteArray(stateFile.readBytes())
-        }
     }
 
     @JvmStatic
