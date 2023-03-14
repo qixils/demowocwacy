@@ -38,6 +38,7 @@ object Bot {
     var state: BotState = BotState()
         set(value) {
             stateFile.writeBytes(cbor.encodeToByteArray(value))
+            field = value
         }
 
     init {
