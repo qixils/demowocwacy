@@ -199,8 +199,9 @@ object Bot {
         val now = System.currentTimeMillis()
         val nextTenMins = now + 600000 - now % 600000
         delay(nextTenMins - now)
-        // close ballot
+        // close ballot and threads
         message.editMessageComponents(row(voteButton.asDisabled())).queue()
+        channel.threadChannels.forEach { it.manager.setLocked(true).queue() }
         // tally votes
         // TODO
         // check for tie for first place
