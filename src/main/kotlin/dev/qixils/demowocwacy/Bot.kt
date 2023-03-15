@@ -4,6 +4,7 @@ import com.typesafe.config.ConfigFactory
 import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.onButton
 import dev.minn.jda.ktx.interactions.components.primary
+import dev.minn.jda.ktx.interactions.components.replyModal
 import dev.minn.jda.ktx.interactions.components.row
 import dev.minn.jda.ktx.jdabuilder.intents
 import dev.minn.jda.ktx.jdabuilder.light
@@ -55,22 +56,28 @@ object Bot {
     val allDecrees: List<Decree>
 
     /**
-     * All decrees that have been selected by an elected leader.
+     * Gets decrees that have been selected by an elected leader.
      */
     val selectedDecrees: List<Decree>
         get() = allDecrees.filter { it.name in state.selectedDecrees }
 
     /**
-     * All decrees that have been ignored by an elected leader.
+     * Gets decrees that have been ignored by an elected leader.
      */
     val ignoredDecrees: List<Decree>
         get() = allDecrees.filter { it.name in state.ignoredDecrees }
 
     /**
-     * All decrees that have not yet been shown to an elected leader.
+     * Gets pending decrees that are waiting to be selected or ignored.
+     */
+    val pendingDecrees: List<Decree>
+        get() = allDecrees.filter { it.name in state.election.decrees }
+
+    /**
+     * All decrees that have not yet been drawn from the random hat.
      */
     val remainingDecrees: List<Decree>
-        get() = allDecrees.filter { it.name !in state.selectedDecrees && it.name !in state.ignoredDecrees }
+        get() = allDecrees.filter { it.name !in state.selectedDecrees && it.name !in state.ignoredDecrees && it.name !in state.election.decrees }
 
     /**
      * Channel in which elections are held.
@@ -115,7 +122,15 @@ object Bot {
                 return@onButton
             }
             // open form
-            TODO()
+            event.replyModal(id = "form:signup", title = "Announce Candidacy") {
+                paragraph(
+                    id = "form:signup:platform",
+                    label = "Describe what you would do as prime minister",
+                    required = true,
+                    placeholder = "As prime minister of ${event.guild!!.name}, I would..."
+                )
+                // TODO: single choice decree field
+            }
         }
         jda.onButton(voteButton.id!!) { event ->
             if (!isRegisteredVoter(event.user)) {
