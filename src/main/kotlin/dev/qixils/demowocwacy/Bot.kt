@@ -1,7 +1,10 @@
 package dev.qixils.demowocwacy
 
 import com.typesafe.config.ConfigFactory
+import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.onButton
+import dev.minn.jda.ktx.interactions.components.primary
+import dev.minn.jda.ktx.interactions.components.row
 import dev.minn.jda.ktx.jdabuilder.intents
 import dev.minn.jda.ktx.jdabuilder.light
 import dev.minn.jda.ktx.messages.MessageCreate
@@ -36,6 +39,8 @@ object Bot {
 
     private val configFile = File("bot.conf")
     private val stateFile = File("state.cbor")
+    private val signupButton = primary("signup", "Announce Candidacy")
+    private val voteButton = primary("vote", "Open Ballot")
 
     val jda: JDA
 
@@ -98,7 +103,7 @@ object Bot {
             TWOWDecree()
         )
         // init forms
-        jda.onButton("signup") { event ->
+        jda.onButton(signupButton.id!!) { event ->
            // signing up for the prime minister-y
             if (!isRegisteredVoter(event.user)) {
                 event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
@@ -107,6 +112,19 @@ object Bot {
             val election = state.election
             if (election.candidates.contains(event.user.idLong)) {
                 event.reply_("You are already a candidate!", ephemeral = true).queue()
+                return@onButton
+            }
+            // open form
+            TODO()
+        }
+        jda.onButton(voteButton.id!!) { event ->
+            if (!isRegisteredVoter(event.user)) {
+                event.reply_("You must be a registered voter to vote!", ephemeral = true).queue()
+                return@onButton
+            }
+            val election = state.election
+            if (election.votes.containsKey(event.user.idLong)) {
+                event.reply_("You have already voted!", ephemeral = true).queue()
                 return@onButton
             }
             // open form
@@ -134,32 +152,66 @@ object Bot {
                 val zdt = ZonedDateTime.now(ZoneOffset.UTC)
                 if (zdt.month == Month.APRIL && zdt.dayOfMonth > 1)
                     break
-
-                // check for in-progress election
-                // TODO
-
-                // election has ended; wait for top of hour to start next one
-                val now = System.currentTimeMillis()
-                val nextHour = now + 3600000 - now % 3600000
-                delay(nextHour - now)
-
-                // start election
-                startElection()
+                // begin election handling
+                handleElection()
             }
         }
     }
 
-    private suspend fun startElection() {
+    private suspend fun handleElection() {
+        // TODO: state management (resume from prior session)
+        handleElectionRegistrationPhase()
+        handleElectionVotingPhase()
+    }
+
+    private suspend fun handleElectionRegistrationPhase() {
+        // wait for start of election cycle (top of the hour)
+        var now = System.currentTimeMillis()
+        val nextHour = now + 3600000 - now % 3600000
+        delay(nextHour - now)
         // put signup form in elections channel
-        val message = MessageCreate {
+        val messageData = MessageCreate {
             content = "The time has come to elect a new leader to bring our nation to glorious greatness! " +
                     "Over the next half hour, the fearless and noble of you citizens will have the opportunity to run for office. " +
                     "Attached to this message is a button which will open the form to announce your candidacy.\n\n" +
                     "For those of you not yet ready to take the reins of power, we still want to hear your voice. " +
                     "A thread will be created for each candidate to discuss their platform and answer questions from you, the people.\n\n" +
                     "Vox populi, vox dei."
-            // TODO add button component
+            components += row(signupButton)
         }
-        channel.sendMessage(message).queue()
+        val message = channel.sendMessage(messageData).await()
+        // sleep until XX:30
+        now = System.currentTimeMillis()
+        val nextHalfHour = now + 1800000 - now % 1800000
+        delay(nextHalfHour - now)
+        // close signup form
+        message.editMessageComponents(row(signupButton.asDisabled())).queue()
+    }
+
+    private suspend fun handleElectionVotingPhase() {
+        // announce ballot
+        val messageData = MessageCreate {
+            content = "" // todo
+            components += row(voteButton)
+        }
+        val message = channel.sendMessage(messageData).await()
+        // sleep until XX:40
+        val now = System.currentTimeMillis()
+        val nextTenMins = now + 600000 - now % 600000
+        delay(nextTenMins - now)
+        // close ballot
+        message.editMessageComponents(row(voteButton.asDisabled())).queue()
+        // tally votes
+        // TODO
+        // check for tie for first place
+        // TODO
+        if (true) {
+            // resort to short FPTP tie breaker
+            // TODO
+        }
+        // announce winner
+        // TODO
+        // DM decree form
+        // TODO
     }
 }
