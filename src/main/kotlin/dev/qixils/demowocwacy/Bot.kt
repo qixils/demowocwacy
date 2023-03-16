@@ -2,16 +2,13 @@ package dev.qixils.demowocwacy
 
 import com.typesafe.config.ConfigFactory
 import dev.minn.jda.ktx.coroutines.await
+import dev.minn.jda.ktx.events.listener
 import dev.minn.jda.ktx.events.onButton
 import dev.minn.jda.ktx.events.onStringSelect
-import dev.minn.jda.ktx.interactions.components.StringSelectMenu
-import dev.minn.jda.ktx.interactions.components.primary
-import dev.minn.jda.ktx.interactions.components.replyModal
-import dev.minn.jda.ktx.interactions.components.row
+import dev.minn.jda.ktx.interactions.components.*
 import dev.minn.jda.ktx.jdabuilder.intents
 import dev.minn.jda.ktx.jdabuilder.light
-import dev.minn.jda.ktx.messages.MessageCreate
-import dev.minn.jda.ktx.messages.reply_
+import dev.minn.jda.ktx.messages.*
 import dev.qixils.demowocwacy.decrees.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -23,10 +20,14 @@ import kotlinx.serialization.hocon.Hocon
 import kotlinx.serialization.hocon.decodeFromConfig
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
 import net.dv8tion.jda.api.requests.GatewayIntent
+import net.dv8tion.jda.api.utils.messages.MessageRequest
 import net.dv8tion.jda.internal.utils.PermissionUtil
 import java.io.File
 import java.time.Month
@@ -89,6 +90,12 @@ object Bot {
         get() = jda.getTextChannelById(config.channel)!!
 
     /**
+     * Guild in which the bot is running.
+     */
+    val guild: Guild
+        get() = jda.getGuildById(config.guild)!!
+
+    /**
      * The state of the bot.
      * This is loaded from [stateFile] and saved to it when changed.
      */
@@ -108,6 +115,8 @@ object Bot {
             // I don't think I need member updates/joins/leaves but if I do the intent is GUILD_MEMBERS
             intents += GatewayIntent.MESSAGE_CONTENT
         }
+        // disable @everyone pings
+        MessageRequest.setDefaultMentions(emptySet())
         // init decrees
         allDecrees = listOf(
             TWOWDecree(),
@@ -115,13 +124,13 @@ object Bot {
         )
         // init forms
         jda.onButton(signupButton.id!!) { event ->
-           // signing up for the prime minister-y
+           // signing up for office
             if (!isRegisteredVoter(event.user)) {
                 event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
                 return@onButton
             }
             val election = state.election
-            if (election.candidates.contains(event.user.idLong)) {
+            if (event.user.idLong in election.candidates) {
                 event.reply_("You are already a candidate!", ephemeral = true).queue()
                 return@onButton
             }
@@ -131,9 +140,8 @@ object Bot {
                     id = "form:signup:platform",
                     label = "Describe what you would do as prime minister",
                     required = true,
-                    placeholder = "As prime minister of ${event.guild!!.name}, I would..."
+                    placeholder = "As prime minister of ${event.guild!!.name}, I would enact the decree ___. I would also..."
                 )
-                // TODO: single choice decree field
             }
         }
         jda.onButton(voteButton.id!!) { event ->
@@ -163,8 +171,52 @@ object Bot {
             state.election.votes += mapOf(
                 Pair(event.user.idLong, event.selectedOptions.map{ it.value.toLong() })
             )
-            event.reply_(content="thamkies for votimgg:333 ")
+            event.reply_(content="thamkies for votimgg:333 ").queue()
         }
+            // TODO: here is where I would open a form. except forms don't actually support choices yet.
+            //  so i think it will have to just be an ephemeral message with an action row for:
+            //   - selecting approved candidates
+            //   - selecting favorite decree (i think just one)
+            //   - submitting
+        jda.listener<ModalInteractionEvent> { event ->
+            if (event.modalId == "form:signup") {
+                val election = state.election
+                // double check that the user still isn't a candidate (and is a registered voter)
+                if (!isRegisteredVoter(event.user)) {
+                    event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
+                    return@listener
+                }
+                if (event.user.idLong in election.candidates) {
+                    event.reply_("You are already a candidate!", ephemeral = true).queue()
+                    return@listener
+                }
+                // save candidate to state
+                election.candidates.add(event.user.idLong)
+                state = state.copy(election = election)
+                // create thread for candidate/platform
+                val platform = event.getValue("form:signup:platform")?.asString ?: return@listener
+                val message = channel.send(
+                    """
+                        ${event.member!!.asMention} has announced their candidacy!
+                        >>> $platform
+                    """.trimIndent(),
+                    mentions = Mentions.of(MentionConfig.users(listOf(event.member!!.idLong)))
+                ).await()
+                message.createThreadChannel("Candidate: ${event.member!!.effectiveName}").queue()
+            }
+        }
+    }
+
+    fun isGuild(guild: Long): Boolean {
+        return guild == config.guild
+    }
+
+    fun isGuild(guild: Guild): Boolean {
+        return isGuild(guild.idLong)
+    }
+
+    fun isInGuild(channel: GuildChannel): Boolean {
+        return isGuild(channel.guild)
     }
 
     fun isRegisteredVoter(user: User): Boolean {
