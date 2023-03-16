@@ -9,6 +9,7 @@ import dev.minn.jda.ktx.interactions.components.*
 import dev.minn.jda.ktx.jdabuilder.intents
 import dev.minn.jda.ktx.jdabuilder.light
 import dev.minn.jda.ktx.messages.*
+import dev.minn.jda.ktx.util.SLF4J
 import dev.qixils.demowocwacy.decrees.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -29,6 +30,7 @@ import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.messages.MessageRequest
 import net.dv8tion.jda.internal.utils.PermissionUtil
+import org.slf4j.Logger
 import java.io.File
 import java.time.Month
 import java.time.ZoneOffset
@@ -47,6 +49,7 @@ object Bot {
     private val signupButton = primary("signup", "Announce Candidacy")
 
     val jda: JDA
+    val logger: Logger by SLF4J
 
     /**
      * The user-defined configuration.
@@ -99,9 +102,9 @@ object Bot {
      * This is loaded from [stateFile] and saved to it when changed.
      */
     var state: BotState = if (stateFile.exists()) cbor.decodeFromByteArray(stateFile.readBytes()) else BotState()
-        get() = field.copy()
+        get() = field//.copy()
         set(value) {
-            field = value.copy()
+            field = value//.copy()
             stateFile.writeBytes(cbor.encodeToByteArray(field))
         }
 
@@ -128,8 +131,7 @@ object Bot {
                 event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
                 return@onButton
             }
-            val election = state.election
-            if (event.user.idLong in election.candidates) {
+            if (event.user.idLong in state.election.candidates) {
                 event.reply_("You are already a candidate!", ephemeral = true).queue()
                 return@onButton
             }
@@ -172,16 +174,20 @@ object Bot {
         }
         // init ballots
         jda.onStringSelect("vote:candidate"){event ->
-            state.election.candidateVotes[event.user.idLong] = event.selectedOptions.map{ it.value.toLong() }.filter { state.election.candidates.contains(it) }
+            val election = state.election
+            election.candidateVotes[event.user.idLong] = event.selectedOptions.map{ it.value.toLong() }.filter { election.candidates.contains(it) }
+            state = state.copy(election = election)
             event.reply_(content = "Your approved candidates have been recorded.", ephemeral = true).queue()
         }
         jda.onStringSelect("vote:decree") { event ->
+            val election = state.election
             val decree = event.selectedOptions.first().value
-            if (decree !in state.election.decrees) {
+            if (decree !in election.decrees) {
                 event.reply_(content = "That decree is not currently available to vote on.", ephemeral = true).queue()
                 return@onStringSelect
             }
-            state.election.decreeVotes[event.user.idLong] = decree
+            election.decreeVotes[event.user.idLong] = decree
+            state = state.copy(election = election)
             event.reply_(content = "Your desired decree has been recorded.", ephemeral = true).queue()
         }
     }
@@ -211,7 +217,7 @@ object Bot {
         runBlocking {
             jda.awaitReady()
             // init active decrees
-            selectedDecrees.filter(Decree::persistent).forEach(Decree::execute)
+            selectedDecrees.filter(Decree::persistent).forEach { it.execute() }
             // loop
             while (true) {
                 // abort after April 1st

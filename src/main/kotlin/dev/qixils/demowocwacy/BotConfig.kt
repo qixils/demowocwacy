@@ -1,5 +1,6 @@
 package dev.qixils.demowocwacy
 
+import dev.qixils.demowocwacy.decrees.UnseriousConfig
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -9,5 +10,10 @@ data class BotConfig(
     val channel: Long, // channel to send election messages in
     val protectedChannels: List<Long>,
     val protectedUsers: List<Long>,
-    val discussionChannels: List<Long>
+    val decrees: DecreeConfig,
+)
+
+@Serializable
+data class DecreeConfig(
+    val unserious: UnseriousConfig,
 )

@@ -19,7 +19,7 @@ abstract class Decree(
     val displayName: String
         get() = "${emoji.formatted} $name"
 
-    abstract fun execute()
+    abstract suspend fun execute()
 
     fun isApplicableTo(channel: Channel, author: User): Boolean {
         if (channel !is GuildChannel) return false
@@ -29,6 +29,6 @@ abstract class Decree(
         return true
     }
 
-    open fun cleanup() {
+    open suspend fun cleanup() {
     }
 }
