@@ -26,7 +26,9 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
+import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.messages.MessageRequest
@@ -178,7 +180,7 @@ object Bot {
             }
         }
         // init ballots
-        jda.onStringSelect("vote:candidate"){event ->
+        jda.onStringSelect("vote:candidate") {event ->
             state.election.candidateVotes[event.user.idLong] = event.selectedOptions.map{ it.value.toLong() }.filter { state.election.candidates.contains(it) }
             saveState()
             event.reply_(content = "Your approved candidates have been recorded.", ephemeral = true).queue()
@@ -275,16 +277,30 @@ object Bot {
         val electionOptions = state.election.candidates.map { cand: Long -> SelectOption.of(guild.retrieveMemberById(cand).await().effectiveName, cand.toString()) }
         // announce ballot
         val messageData = MessageCreate {
-            content = "The election has begun! Attached to this message, you will find the two sections of the ballot.\n" +
-                    "The first section is for the election of the next leader of our nation. " +
-                    "As this nation follows the principles of approval voting, you may select all candidates whose platform you support.\n" +
-                    "The second section is for choosing the decree you wish to see enacted by the new leader. " +
-                    "Only the top three most popular decrees will be considered for enactment, so choose wisely."
+            content = buildString {
+                append("The election has begun! Attached to this message, you will find the two sections of the ballot.\n")
+                append("The first section is for the election of the next leader of our nation. ")
+                append("As this nation follows the principles of approval voting, you may select all candidates whose platform you")
+                if (electionOptions.isNotEmpty()) {
+                    append(" support.\n")
+                } else {
+                    append("-- _wait, what's that? uhuh. yep. ok got it, i'll let them know. ok, bye._\n")
+                    append("It seems that none of you were brave enough to run for office. What a shame. ")
+                    append("Not to fear, our elections are protected by contingencies upon contingencies. ")
+                    append("The fearless PRIME_MINISTER_9000 will be stepping in to fulfill the duties of the office until the next election cycle.\n")
+                }
+                append("The second section is for choosing the decree you wish to see enacted by the new leader. ")
+                append("Only the top three most popular decrees will be considered for enactment, so choose wisely.")
+            }
             components += listOf(
                 row(StringSelectMenu("vote:candidate") {
-                    // TODO: handle empty candidate list?
-                    addOptions(electionOptions)
-                    setRequiredRange(1,25)
+                    if (electionOptions.isNotEmpty()) {
+                        addOptions(electionOptions)
+                    } else {
+                        option("PRIME_MINISTER_9000", "PRIME_MINISTER_9000", "I WILL MAKE HTSTEM GREAT AGAIN", Emoji.fromUnicode("\uD83E\uDD16"), true)
+                        isDisabled = true
+                    }
+                    setRequiredRange(1, SelectMenu.OPTIONS_MAX_AMOUNT)
                 }),
                 row(StringSelectMenu("vote:decree") {
                     for (decree in pendingDecrees) {
