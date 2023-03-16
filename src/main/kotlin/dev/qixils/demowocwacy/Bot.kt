@@ -318,16 +318,34 @@ object Bot {
         message.editMessageComponents(message.components.map { it.asDisabled() }).queue()
         channel.threadChannels.forEach { it.manager.setLocked(true).queue() }
         // tally votes
-        // TODO
-        // check for tie for first place
-        // TODO
-        if (false) {
-            // resort to short FPTP tie breaker
+        val votes = mutableMapOf<Long, Int>()
+        for (candidate in state.election.candidates)
+            votes[candidate] = 0
+        if (votes.isEmpty()) {
+            // TODO: PRIME_MINISTER_9000
+        } else {
+            for ((voter, vote) in state.election.candidateVotes.entries) {
+                for (candidate in vote) {
+                    if (candidate !in votes) {
+                        logger.warn("User $voter voted for unknown candidate $candidate")
+                        continue
+                    }
+                    votes[candidate] = votes[candidate]!! + 1
+                }
+            }
+            val sortedVotes = votes.toList().sortedByDescending { it.second }
+            val winners = sortedVotes.takeWhile { it.second == sortedVotes.first().second }
+            val winner: Long
+            if (winners.size > 1) {
+                // resort to 5min FPTP tie breaker
+                // TODO
+            } else {
+                winner = winners.first().first
+            }
+            // announce winner
+            // TODO
+            // DM decree form to winner (actually maybe don't DM because users can disable them; use a private channel instead?)
             // TODO
         }
-        // announce winner
-        // TODO
-        // DM decree form to winner (actually maybe don't DM because users can disable them; use a private channel instead?)
-        // TODO
     }
 }
