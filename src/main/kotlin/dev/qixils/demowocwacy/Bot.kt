@@ -3,6 +3,8 @@ package dev.qixils.demowocwacy
 import com.typesafe.config.ConfigFactory
 import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.onButton
+import dev.minn.jda.ktx.events.onStringSelect
+import dev.minn.jda.ktx.interactions.components.StringSelectMenu
 import dev.minn.jda.ktx.interactions.components.primary
 import dev.minn.jda.ktx.interactions.components.replyModal
 import dev.minn.jda.ktx.interactions.components.row
@@ -23,6 +25,7 @@ import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.internal.utils.PermissionUtil
 import java.io.File
@@ -142,8 +145,24 @@ object Bot {
                 event.reply_("You have already voted!", ephemeral = true).queue()
                 return@onButton
             }
-            // open form
-            TODO()
+
+            // btw todo maybe have to make sure only 25 candidates per menu
+            val electionOptions = election.candidates.map { cand: Long -> SelectOption.of(jda.retrieveUserById(cand).await().name, cand.toString()) }
+
+            // dm?
+            event.reply_("select candidates here u\\*ᵤ\\*u", ephemeral = true, components = listOf(row(
+                StringSelectMenu("menu:vote") {
+                    addOptions(electionOptions)
+                    setRequiredRange(2,25)
+                }
+            ))).queue()
+        }
+        // todo check if within voting time
+        jda.onStringSelect("menu:vote"){event ->
+            state.election.votes += mapOf(
+                Pair(event.user.idLong, event.selectedOptions.map{ it.value.toLong() })
+            )
+            event.reply_(content="thamkies for votimgg:333 ")
         }
     }
 
