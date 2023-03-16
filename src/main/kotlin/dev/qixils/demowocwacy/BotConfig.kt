@@ -9,5 +9,5 @@ data class BotConfig(
     val channel: Long, // channel to send election messages in
     val protectedChannels: List<Long>,
     val protectedUsers: List<Long>,
-    val unseriousChannels: List<Long>
+    val discussionChannels: List<Long>
 )

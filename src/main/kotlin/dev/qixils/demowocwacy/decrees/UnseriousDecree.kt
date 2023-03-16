@@ -6,21 +6,21 @@ import net.dv8tion.jda.api.entities.channel.concrete.Category
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 
 class UnseriousDecree : Decree(
-    "1",
+    "Embrace #unserious",
     "\ud83e\udd21",
-    "move channels to hidden, only unserious remains",
+    "Archives all discussion channels in favor of #unserious",
 ) {
-    private var storage: Map<TextChannel, Category> = emptyMap()
+    private val storage: MutableMap<TextChannel, Category?> = mutableMapOf()
     override fun execute() {
-        val category: Category = Bot.jda.getCategoriesByName("hidden", true)[0]
-        for (channel in Bot.config.unseriousChannels) {
+        val category: Category = Bot.guild.getCategoriesByName("hidden", true).first()
+        for (channel in Bot.config.discussionChannels) {
 
             val channelResolved = Bot.jda.getTextChannelById(channel)!!
-            storage += mapOf(Pair(channelResolved, channelResolved.parentCategory!!)) // idk just dont run it if the unseriousChannels aren't in a category :gibbited:
+            storage[channelResolved] = channelResolved.parentCategory
             // TODO need bot.store to be persistent for bot reload
 
             channelResolved.manager.setParent(category).queue()
-            println(channelResolved.positionRaw)
+            //println(channelResolved.positionRaw)
         }
     }
 
