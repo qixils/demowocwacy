@@ -102,10 +102,9 @@ object Bot {
      * This is loaded from [stateFile] and saved to it when changed.
      */
     var state: BotState = if (stateFile.exists()) cbor.decodeFromByteArray(stateFile.readBytes()) else BotState()
-        get() = field//.copy()
         set(value) {
-            field = value//.copy()
-            stateFile.writeBytes(cbor.encodeToByteArray(field))
+            field = value
+            saveState(field)
         }
 
     init {
@@ -147,19 +146,18 @@ object Bot {
         }
         jda.listener<ModalInteractionEvent> { event ->
             if (event.modalId == "form:signup") {
-                val election = state.election
                 // double check that the user still isn't a candidate (and is a registered voter)
                 if (!isRegisteredVoter(event.user)) {
                     event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
                     return@listener
                 }
-                if (event.user.idLong in election.candidates) {
+                if (event.user.idLong in state.election.candidates) {
                     event.reply_("You are already a candidate!", ephemeral = true).queue()
                     return@listener
                 }
                 // save candidate to state
-                election.candidates.add(event.user.idLong)
-                state = state.copy(election = election)
+                state.election.candidates.add(event.user.idLong)
+                saveState()
                 // create thread for candidate/platform
                 val platform = event.getValue("form:signup:platform")?.asString ?: return@listener
                 val message = channel.send(
@@ -174,22 +172,28 @@ object Bot {
         }
         // init ballots
         jda.onStringSelect("vote:candidate"){event ->
-            val election = state.election
-            election.candidateVotes[event.user.idLong] = event.selectedOptions.map{ it.value.toLong() }.filter { election.candidates.contains(it) }
-            state = state.copy(election = election)
+            state.election.candidateVotes[event.user.idLong] = event.selectedOptions.map{ it.value.toLong() }.filter { state.election.candidates.contains(it) }
+            saveState()
             event.reply_(content = "Your approved candidates have been recorded.", ephemeral = true).queue()
         }
         jda.onStringSelect("vote:decree") { event ->
-            val election = state.election
             val decree = event.selectedOptions.first().value
-            if (decree !in election.decrees) {
+            if (decree !in state.election.decrees) {
                 event.reply_(content = "That decree is not currently available to vote on.", ephemeral = true).queue()
                 return@onStringSelect
             }
-            election.decreeVotes[event.user.idLong] = decree
-            state = state.copy(election = election)
+            state.election.decreeVotes[event.user.idLong] = decree
+            saveState()
             event.reply_(content = "Your desired decree has been recorded.", ephemeral = true).queue()
         }
+    }
+
+    private fun saveState(state: BotState) {
+        stateFile.writeBytes(cbor.encodeToByteArray(state))
+    }
+
+    fun saveState() {
+        saveState(state)
     }
 
     fun isGuild(guild: Long): Boolean {

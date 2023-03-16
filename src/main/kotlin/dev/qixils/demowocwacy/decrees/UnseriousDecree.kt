@@ -29,8 +29,8 @@ class UnseriousDecree : Decree(
             // set new category
             channel.manager.setParent(category).queue()
         }
-        val decreeState = Bot.state.decrees.copy(unserious = UnseriousState(storage))
-        Bot.state = Bot.state.copy(decrees = decreeState)
+        Bot.state.decrees.unserious.discussionChannels = storage
+        Bot.saveState()
     }
 
     override suspend fun cleanup() {
@@ -61,7 +61,7 @@ class UnseriousDecree : Decree(
 
 @Serializable
 data class UnseriousState(
-    val discussionChannels: Map<Long, Pair<Long?, Int>> = emptyMap(),
+    var discussionChannels: Map<Long, Pair<Long?, Int>> = emptyMap(),
 )
 
 @Serializable

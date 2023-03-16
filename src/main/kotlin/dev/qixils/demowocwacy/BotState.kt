@@ -5,10 +5,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class BotState(
-    val selectedDecrees: MutableList<String> = mutableListOf(),
-    val ignoredDecrees: MutableList<String> = mutableListOf(),
-    val election: ElectionState = ElectionState(),
-    val decrees: DecreeState = DecreeState(),
+    var selectedDecrees: MutableList<String> = mutableListOf(),
+    var ignoredDecrees: MutableList<String> = mutableListOf(),
+    var election: ElectionState = ElectionState(),
+    var decrees: DecreeState = DecreeState(),
 )
 
 @Serializable
