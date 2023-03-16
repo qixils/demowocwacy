@@ -23,9 +23,9 @@ import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
-import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
+import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.messages.MessageRequest
 import net.dv8tion.jda.internal.utils.PermissionUtil
@@ -45,7 +45,6 @@ object Bot {
     private val configFile = File("bot.conf")
     private val stateFile = File("state.cbor")
     private val signupButton = primary("signup", "Announce Candidacy")
-    private val voteButton = primary("vote", "Open Ballot")
 
     val jda: JDA
 
@@ -122,7 +121,7 @@ object Bot {
             TWOWDecree(),
             UnseriousDecree()
         )
-        // init forms
+        // init signup form
         jda.onButton(signupButton.id!!) { event ->
            // signing up for office
             if (!isRegisteredVoter(event.user)) {
@@ -144,40 +143,6 @@ object Bot {
                 )
             }
         }
-        jda.onButton(voteButton.id!!) { event ->
-            if (!isRegisteredVoter(event.user)) {
-                event.reply_("You must be a registered voter to vote!", ephemeral = true).queue()
-                return@onButton
-            }
-            val election = state.election
-            if (election.votes.containsKey(event.user.idLong)) {
-                event.reply_("You have already voted!", ephemeral = true).queue()
-                return@onButton
-            }
-
-            // btw todo maybe have to make sure only 25 candidates per menu
-            val electionOptions = election.candidates.map { cand: Long -> SelectOption.of(jda.retrieveUserById(cand).await().name, cand.toString()) }
-
-            // dm?
-            event.reply_("select candidates here u\\*ᵤ\\*u", ephemeral = true, components = listOf(row(
-                StringSelectMenu("menu:vote") {
-                    addOptions(electionOptions)
-                    setRequiredRange(2,25)
-                }
-            ))).queue()
-        }
-        // todo check if within voting time
-        jda.onStringSelect("menu:vote"){event ->
-            state.election.votes += mapOf(
-                Pair(event.user.idLong, event.selectedOptions.map{ it.value.toLong() })
-            )
-            event.reply_(content="thamkies for votimgg:333 ").queue()
-        }
-            // TODO: here is where I would open a form. except forms don't actually support choices yet.
-            //  so i think it will have to just be an ephemeral message with an action row for:
-            //   - selecting approved candidates
-            //   - selecting favorite decree (i think just one)
-            //   - submitting
         jda.listener<ModalInteractionEvent> { event ->
             if (event.modalId == "form:signup") {
                 val election = state.election
@@ -204,6 +169,20 @@ object Bot {
                 ).await()
                 message.createThreadChannel("Candidate: ${event.member!!.effectiveName}").queue()
             }
+        }
+        // init ballots
+        jda.onStringSelect("vote:candidate"){event ->
+            state.election.candidateVotes[event.user.idLong] = event.selectedOptions.map{ it.value.toLong() }.filter { state.election.candidates.contains(it) }
+            event.reply_(content = "Your approved candidates have been recorded.", ephemeral = true).queue()
+        }
+        jda.onStringSelect("vote:decree") { event ->
+            val decree = event.selectedOptions.first().value
+            if (decree !in state.election.decrees) {
+                event.reply_(content = "That decree is not currently available to vote on.", ephemeral = true).queue()
+                return@onStringSelect
+            }
+            state.election.decreeVotes[event.user.idLong] = decree
+            event.reply_(content = "Your desired decree has been recorded.", ephemeral = true).queue()
         }
     }
 
@@ -272,14 +251,30 @@ object Bot {
         val nextHalfHour = now + 1800000 - now % 1800000
         delay(nextHalfHour - now)
         // close signup form
-        message.editMessageComponents(row(signupButton.asDisabled())).queue()
+        message.editMessageComponents(message.components.map { it.asDisabled() }).queue()
     }
 
     private suspend fun handleElectionVotingPhase() {
+        val electionOptions = state.election.candidates.map { cand: Long -> SelectOption.of(guild.retrieveMemberById(cand).await().effectiveName, cand.toString()) }
         // announce ballot
         val messageData = MessageCreate {
-            content = "" // todo
-            components += row(voteButton)
+            content = "The election has begun! Attached to this message, you will find the two sections of the ballot.\n" +
+                    "The first section is for the election of the next leader of our nation. " +
+                    "As this nation follows the principles of approval voting, you may select all candidates whose platform you support.\n" +
+                    "The second section is for choosing the decree you wish to see enacted by the new leader. " +
+                    "Only the top three most popular decrees will be considered for enactment, so choose wisely."
+            components += listOf(
+                row(StringSelectMenu("vote:candidate") {
+                    // TODO: handle empty candidate list?
+                    addOptions(electionOptions)
+                    setRequiredRange(1,25)
+                }),
+                row(StringSelectMenu("vote:decree") {
+                    for (decree in pendingDecrees) {
+                        option(decree.name, decree.name, emoji = decree.emoji)
+                    }
+                })
+            )
         }
         val message = channel.sendMessage(messageData).await()
         // sleep until XX:40
@@ -287,19 +282,19 @@ object Bot {
         val nextTenMins = now + 600000 - now % 600000
         delay(nextTenMins - now)
         // close ballot and threads
-        message.editMessageComponents(row(voteButton.asDisabled())).queue()
+        message.editMessageComponents(message.components.map { it.asDisabled() }).queue()
         channel.threadChannels.forEach { it.manager.setLocked(true).queue() }
         // tally votes
         // TODO
         // check for tie for first place
         // TODO
-        if (true) {
+        if (false) {
             // resort to short FPTP tie breaker
             // TODO
         }
         // announce winner
         // TODO
-        // DM decree form
+        // DM decree form to winner (actually maybe don't DM because users can disable them; use a private channel instead?)
         // TODO
     }
 }

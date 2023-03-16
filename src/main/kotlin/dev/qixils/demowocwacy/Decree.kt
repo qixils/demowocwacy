@@ -16,7 +16,9 @@ abstract class Decree(
 ) {
     constructor(name: String, emoji: String, description: String, persistent: Boolean = false) : this(name, Emoji.fromFormatted(emoji), description, persistent)
 
-    fun displayName() = "${emoji.formatted} $name"
+    val displayName: String
+        get() = "${emoji.formatted} $name"
+
     abstract fun execute()
 
     fun isApplicableTo(channel: Channel, author: User): Boolean {
