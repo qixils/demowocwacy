@@ -13,6 +13,7 @@ class UnseriousDecree : Decree(
     "Embrace #unserious",
     "\uD83D\uDE08",
     "Archives all discussion channels in favor of #unserious",
+    false
 ) {
     override suspend fun execute() {
         val storage: MutableMap<Long, Pair<Long?, Int>> = mutableMapOf()
@@ -66,6 +67,8 @@ data class UnseriousState(
 
 @Serializable
 data class UnseriousConfig(
+    // Channel IDs to hide upon enacting the "Embrace #unserious" decree
     val discussionChannels: List<Long> = emptyList(),
+    // ID of the category to hide channels in
     val hiddenCategory: Long = 0,
 )

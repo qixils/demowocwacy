@@ -12,9 +12,9 @@ abstract class Decree(
     /**
      * Whether this decree is persistent, meaning its execute function should be called on every startup.
      */
-    val persistent: Boolean = false,
+    val persistent: Boolean,
 ) {
-    constructor(name: String, emoji: String, description: String, persistent: Boolean = false) : this(name, Emoji.fromFormatted(emoji), description, persistent)
+    constructor(name: String, emoji: String, description: String, persistent: Boolean) : this(name, Emoji.fromFormatted(emoji), description, persistent)
 
     val displayName: String
         get() = "${emoji.formatted} $name"

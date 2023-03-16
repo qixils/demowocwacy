@@ -19,6 +19,7 @@ import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.hocon.Hocon
 import kotlinx.serialization.hocon.decodeFromConfig
+import kotlinx.serialization.hocon.encodeToConfig
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
@@ -108,8 +109,13 @@ object Bot {
         }
 
     init {
-        // load config | TODO: default config? ig not very important
-        val configNode = ConfigFactory.parseFile(configFile)
+        // create default config if it doesn't exist
+        if (!configFile.exists()) {
+            val configNode = hocon.encodeToConfig(BotConfig())
+            configFile.writeText(configNode.resolve().root().render())
+        }
+        // load config
+        val configNode = ConfigFactory.parseFileAnySyntax(configFile)
         config = hocon.decodeFromConfig(configNode)
         // build JDA
         jda = light(config.token, enableCoroutines=true) {
@@ -121,7 +127,8 @@ object Bot {
         // init decrees
         allDecrees = listOf(
             TWOWDecree(),
-            UnseriousDecree()
+            UnseriousDecree(),
+            DemoteLexiDecree()
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
