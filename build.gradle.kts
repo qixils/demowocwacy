@@ -17,6 +17,7 @@ dependencies {
     implementation("com.github.minndevelopment:jda-ktx:${property("jda-ktx.version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-hocon:${property("serialization.version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:${property("serialization.version")}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${property("coroutines.version")}")
 }
 
 tasks.test {

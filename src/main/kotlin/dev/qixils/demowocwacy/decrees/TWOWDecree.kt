@@ -7,7 +7,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 
 class TWOWDecree : Decree(
     "Ten Words of Wisdom",
-    "\uD83D\uDCD7",
+    "\uD83D\uDCD8",
     "Users will no longer be able to send messages larger than ten words",
     persistent = true,
 ) {

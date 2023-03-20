@@ -2,6 +2,8 @@ package dev.qixils.demowocwacy
 
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.Channel
+import net.dv8tion.jda.api.entities.channel.attribute.ICategorizableChannel
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.entities.emoji.Emoji
 
@@ -21,10 +23,17 @@ abstract class Decree(
 
     abstract suspend fun execute()
 
-    fun isApplicableTo(channel: Channel, author: User): Boolean {
+    fun isApplicableTo(channel: Channel): Boolean {
         if (channel !is GuildChannel) return false
         if (!Bot.isInGuild(channel)) return false
         if (channel.idLong in Bot.config.protectedChannels) return false
+        if (channel is ICategorizableChannel && channel.parentCategoryIdLong in Bot.config.protectedChannels) return false
+        if (channel is ThreadChannel && channel.parentChannel.idLong in Bot.config.protectedChannels) return false
+        return true
+    }
+
+    fun isApplicableTo(channel: Channel, author: User): Boolean {
+        if (!isApplicableTo(channel)) return false
         if (author.idLong in Bot.config.protectedUsers) return false
         return true
     }

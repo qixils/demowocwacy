@@ -130,7 +130,8 @@ object Bot {
         allDecrees = listOf(
             TWOWDecree(),
             UnseriousDecree(),
-            DemoteLexiDecree()
+            DemoteLexiDecree(),
+            UndeleteDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
