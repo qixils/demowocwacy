@@ -1,5 +1,6 @@
 package dev.qixils.demowocwacy
 
+import dev.qixils.demowocwacy.decrees.HTCConfig
 import dev.qixils.demowocwacy.decrees.UnseriousConfig
 import kotlinx.serialization.Serializable
 
@@ -37,4 +38,5 @@ data class RoleConfig(
 @Serializable
 data class DecreeConfig(
     val unserious: UnseriousConfig = UnseriousConfig(),
+    val htc: HTCConfig = HTCConfig(),
 )

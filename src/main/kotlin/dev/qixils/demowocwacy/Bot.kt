@@ -132,6 +132,7 @@ object Bot {
             UnseriousDecree(),
             DemoteLexiDecree(),
             UndeleteDecree(),
+            HTCDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
