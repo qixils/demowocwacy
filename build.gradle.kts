@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "1.8.10"
     kotlin("plugin.serialization") version "1.8.10"
+    application
 }
 
 group = "dev.qixils.demowocwacy"
@@ -26,4 +27,8 @@ tasks.test {
 
 kotlin {
     jvmToolchain(17)
+}
+
+application {
+    mainClass.set("dev.qixils.demowocwacy.Bot")
 }
