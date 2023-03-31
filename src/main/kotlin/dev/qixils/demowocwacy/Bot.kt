@@ -44,6 +44,7 @@ object Bot {
 
     val hocon = Hocon {
         useConfigNamingConvention = true
+        encodeDefaults = true
     }
     val cbor = Cbor {  }
 
@@ -114,7 +115,7 @@ object Bot {
         // create default config if it doesn't exist
         if (!configFile.exists()) {
             val configNode = hocon.encodeToConfig(BotConfig())
-            configFile.writeText(configNode.resolve().root().render())
+            configFile.writeText(configNode.root().render())
         }
         // load config
         val configNode = ConfigFactory.parseFileAnySyntax(configFile)
