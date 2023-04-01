@@ -50,6 +50,7 @@ object Bot {
     private val configFile = File("bot.conf")
     private val stateFile = File("state.cbor")
     private val signupButton = primary("signup", "Announce Candidacy")
+    private val voteSorter = compareByDescending<Pair<Long, Int>> { it.second }.then(compareBy { it.first })
 
     val jda: JDA
     val logger: Logger by SLF4J
@@ -197,6 +198,17 @@ object Bot {
             saveState()
             event.reply_(content = "Your desired decree has been recorded.", ephemeral = true).queue()
         }
+        jda.onStringSelect("vote:tiebreak") { event ->
+            // candidate tie break
+            val candidate = event.selectedOptions.first().value.toLong()
+            if (candidate !in state.election.tieBreakCandidates) {
+                event.reply_(content = "That candidate is not currently available to vote on.", ephemeral = true).queue()
+                return@onStringSelect
+            }
+            state.election.tieBreakVotes[event.user.idLong] = candidate
+            saveState()
+            event.reply_(content = "Your desired candidate has been recorded.", ephemeral = true).queue()
+        }
     }
 
     private fun saveState(state: BotState) {
@@ -335,14 +347,37 @@ object Bot {
                     votes[candidate] = votes[candidate]!! + 1
                 }
             }
-            val sortedVotes = votes.toList().sortedByDescending { it.second }
-            val winners = sortedVotes.takeWhile { it.second == sortedVotes.first().second }
+            val sortedVotes = votes.toList().sortedWith(voteSorter)
+            val winners = sortedVotes.takeWhile { it.second == sortedVotes.first().second }.map { it.first }
             val winner: Long
             if (winners.size > 1) {
                 // resort to 5min FPTP tie breaker
-                // TODO
+                state.election.tieBreakCandidates.addAll(winners)
+                channel.sendMessage(MessageCreate {
+                    content = buildString {
+                        append("Ah, an indecisive bunch, are we? ")
+                        append("Alright, I'll give you all five minutes to try to sort this tie before I step in and pick randomly. ")
+                        append("Please select your favorite of the candidates below.")
+                    }
+                    components += row(StringSelectMenu("vote:tiebreak") {
+                        for (candidate in winners) {
+                            option(guild.retrieveMemberById(candidate).await().effectiveName, candidate.toString())
+                        }
+                    })
+                }).await()
+                delay(300000)
+                votes.clear()
+                for ((voter, candidate) in state.election.tieBreakVotes) {
+                    if (candidate !in winners) {
+                        logger.warn("User $voter voted for unknown candidate $candidate")
+                        continue
+                    }
+                    votes[candidate] = votes[candidate]!! + 1
+                }
+                val newSortedVotes = votes.toList().sortedWith(voteSorter)
+                winner = newSortedVotes.takeWhile { it.second == newSortedVotes.first().second }.map { it.first }.random()
             } else {
-                winner = winners.first().first
+                winner = winners.first()
             }
             // announce winner
             // TODO
