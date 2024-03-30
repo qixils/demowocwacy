@@ -15,14 +15,14 @@ class HTCDecree : Decree(
     false
 ) {
     companion object {
-        private const val fallback = "https://cdn.discordapp.com/icons/184755239952318464/a_9aadbeb1de19374fb1e1ab1fa5442a08.gif"
+        private const val FALLBACK = "https://cdn.discordapp.com/icons/184755239952318464/a_986b6070401b3d2053ea35b6252c6ac9.gif"
     }
 
     override suspend fun execute() {
         val sourceGuild = Bot.jda.getGuildById(Bot.config.decrees.htc.guild)
         val destGuild = Bot.jda.getGuildById(Bot.config.guild)!!
-        val image: ImageProxy = sourceGuild?.icon ?: ImageProxy(fallback)
-        val animated = sourceGuild?.iconId?.startsWith("a_") ?: fallback.endsWith(".gif")
+        val image: ImageProxy = sourceGuild?.icon ?: ImageProxy(FALLBACK)
+        val animated = sourceGuild?.iconId?.startsWith("a_") ?: FALLBACK.endsWith(".gif")
         val type = if (animated) IconType.GIF else IconType.PNG
         val icon = Icon.from(image.download(4096).await(), type)
         // TODO: check for inverted colors decree?
