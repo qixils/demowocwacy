@@ -33,6 +33,8 @@ data class RoleConfig(
     val currentLeader: Long = 0,
     // Role ID for users that have previously been in office
     val pastLeader: Long = 0,
+    // Role ID for familiars
+    val familiar: Long = 0,
 )
 
 @Serializable

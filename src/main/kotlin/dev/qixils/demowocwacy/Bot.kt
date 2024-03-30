@@ -23,6 +23,7 @@ import kotlinx.serialization.hocon.encodeToConfig
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
@@ -102,6 +103,18 @@ object Bot {
         get() = jda.getGuildById(config.guild)!!
 
     /**
+     * Familiar
+     */
+    val familiar: Role
+        get() = jda.getRoleById(config.roles.familiar)!!
+
+    /**
+     * Unserious
+     */
+    val unserious: TextChannel
+        get() = jda.getTextChannelById(config.decrees.unserious.channel)!!
+
+    /**
      * The state of the bot.
      * This is loaded from [stateFile] and saved to it when changed.
      */
@@ -136,6 +149,7 @@ object Bot {
             HTCDecree(),
             PeanutDecree(),
             Literally1984(),
+            BlindnessEpidemic(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
