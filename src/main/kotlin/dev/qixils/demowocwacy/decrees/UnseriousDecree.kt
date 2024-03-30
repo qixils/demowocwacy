@@ -67,7 +67,7 @@ data class UnseriousState(
 
 @Serializable
 data class UnseriousConfig(
-    //
+    // ID for the Unserious channel
     val channel: Long = 0,
     // Channel IDs to hide upon enacting the "Embrace #unserious" decree
     val discussionChannels: List<Long> = emptyList(),

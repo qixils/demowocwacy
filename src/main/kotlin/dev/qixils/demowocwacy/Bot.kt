@@ -103,13 +103,13 @@ object Bot {
         get() = jda.getGuildById(config.guild)!!
 
     /**
-     * Familiar
+     * Role for Familiar users.
      */
     val familiar: Role
         get() = jda.getRoleById(config.roles.familiar)!!
 
     /**
-     * Unserious
+     * Unserious channel.
      */
     val unserious: TextChannel
         get() = jda.getTextChannelById(config.decrees.unserious.channel)!!
@@ -150,6 +150,7 @@ object Bot {
             PeanutDecree(),
             Literally1984(),
             BlindnessEpidemic(),
+            EmbraceChristianity(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
