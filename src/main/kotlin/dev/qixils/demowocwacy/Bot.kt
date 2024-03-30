@@ -150,9 +150,10 @@ object Bot {
             PeanutDecree(),
             Literally1984(),
             BlindnessEpidemic(),
-            EmbraceChristianity(),
+            EmbraceChristianityDecree(),
             ReverseDecree(),
             InvertDecree(),
+            TuringTestDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
