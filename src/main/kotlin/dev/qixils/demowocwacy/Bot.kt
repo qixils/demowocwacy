@@ -135,6 +135,7 @@ object Bot {
             UndeleteDecree(),
             HTCDecree(),
             PeanutDecree(),
+            Literally1984(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
