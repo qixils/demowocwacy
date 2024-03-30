@@ -151,7 +151,8 @@ object Bot {
             Literally1984(),
             BlindnessEpidemic(),
             EmbraceChristianity(),
-            ReverseDecree()
+            ReverseDecree(),
+            InvertDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
