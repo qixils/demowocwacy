@@ -125,33 +125,33 @@ class TuringTestDecree : Decree(
     override suspend fun execute() {
         Bot.guild.upsertCommand("verify", "Complete a CAPTCHA to validate your humanity")
 
-        Bot.jda.listener<MessageReceivedEvent> {
-            if (!isApplicableTo(it.channel)) return@listener
-            if (it.message.type.isSystem) return@listener
-            if (isAuthorized(it.author.idLong)) return@listener
+        Bot.jda.listener<MessageReceivedEvent> { event ->
+            if (!isApplicableTo(event.channel, event.author)) return@listener
+            if (event.message.type.isSystem) return@listener
+            if (isAuthorized(event.author.idLong)) return@listener
 
-            it.message.delete().await()
-            it.channel.send("${it.author.asMention}: Please type `/verify` to confirm you are human before chatting!").await()
+            event.message.delete().await()
+            event.channel.send("${event.author.asMention}: Please type `/verify` to confirm you are human before chatting!").await()
         }
 
-        Bot.jda.listener<SlashCommandInteractionEvent> {
-            if (it.fullCommandName != "verify") return@listener
-            if (isAuthorized(it.user.idLong)) {
-                it.reply_("You are already verified!", ephemeral = true).await()
+        Bot.jda.listener<SlashCommandInteractionEvent> { event ->
+            if (event.fullCommandName != "verify") return@listener
+            if (isAuthorized(event.user.idLong)) {
+                event.reply_("You are already verified!", ephemeral = true).await()
                 return@listener
             }
-            sendCaptcha(it)
+            sendCaptcha(event)
         }
 
-        Bot.jda.listener<StringSelectInteractionEvent> {
-            val captcha = captchas.find { c -> "captcha-${c.id}" == it.component.id } ?: return@listener
-            val isSelected = { a: SelectOption -> it.selectedOptions.any { so -> so.value == a.value } }
+        Bot.jda.listener<StringSelectInteractionEvent> { event ->
+            val captcha = captchas.find { c -> "captcha-${c.id}" == event.component.id } ?: return@listener
+            val isSelected = { a: SelectOption -> event.selectedOptions.any { so -> so.value == a.value } }
             val passed = captcha.correct.all(isSelected) && captcha.incorrect.none { a -> !isSelected(a) } // i think this is probably suboptimal but whatever
             if (passed) {
-                authorized[it.user.idLong] = Instant.now()
-                it.reply_("You have verified your humanity! Congratulations.", ephemeral = true).await()
+                authorized[event.user.idLong] = Instant.now()
+                event.reply_("You have verified your humanity! Congratulations.", ephemeral = true).await()
             } else {
-                sendCaptcha(it)
+                sendCaptcha(event)
             }
         }
     }

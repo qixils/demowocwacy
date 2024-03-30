@@ -21,7 +21,7 @@ class ReverseDecree : Decree(
         Bot.jda.listener<MessageReceivedEvent> { event ->
             val member = event.member ?: return@listener
             val channel = event.channel
-            if (!isApplicableTo(channel)) return@listener
+            if (!isApplicableTo(channel, event.author)) return@listener
             if (event.message.type.isSystem) return@listener
             if (channel !is IWebhookContainer) return@listener
 

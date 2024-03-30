@@ -32,18 +32,18 @@ class UndeleteDecree : Decree(
     }
 
     override suspend fun execute() {
-        Bot.jda.listener<MessageReceivedEvent> {
-            if (!isApplicableTo(it.channel)) return@listener
-            if (it.message.type.isSystem) return@listener
-            messages[it.messageIdLong] = it.message
+        Bot.jda.listener<MessageReceivedEvent> { event ->
+            if (!isApplicableTo(event.channel, event.author)) return@listener
+            if (event.message.type.isSystem) return@listener
+            messages[event.messageIdLong] = event.message
         }
-        Bot.jda.listener<MessageUpdateEvent> {
-            if (it.messageIdLong !in messages) return@listener
-            messages[it.messageIdLong] = it.message
+        Bot.jda.listener<MessageUpdateEvent> { event ->
+            if (event.messageIdLong !in messages) return@listener
+            messages[event.messageIdLong] = event.message
         }
-        Bot.jda.listener<MessageDeleteEvent> {
-            if (it.messageIdLong !in messages) return@listener
-            val message = messages[it.messageIdLong]!!
+        Bot.jda.listener<MessageDeleteEvent> { event ->
+            if (event.messageIdLong !in messages) return@listener
+            val message = messages[event.messageIdLong]!!
             message.channel.send(embeds = listOf(Embed {
                 author {
                     name = message.member!!.effectiveName

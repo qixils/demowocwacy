@@ -12,6 +12,16 @@ class BlindnessEpidemic : Decree(
     false
 ) {
     override suspend fun execute() {
-        Bot.unserious.manager.putPermissionOverride(Bot.guild.publicRole, emptySet(), setOf(Permission.MESSAGE_HISTORY)).await()
+        val override = Bot.unserious.getPermissionOverride(Bot.guild.publicRole)
+        val allow = override?.allowed ?: emptySet()
+        val deny = (override?.denied ?: emptySet()) + Permission.MESSAGE_HISTORY
+        Bot.unserious.manager.putPermissionOverride(Bot.guild.publicRole, allow, deny).await()
+    }
+
+    override suspend fun cleanup() {
+        val override = Bot.unserious.getPermissionOverride(Bot.guild.publicRole)
+        val allow = override?.allowed ?: emptySet()
+        val deny = (override?.denied ?: emptySet()) - Permission.MESSAGE_HISTORY
+        Bot.unserious.manager.putPermissionOverride(Bot.guild.publicRole, allow, deny).await()
     }
 }

@@ -154,6 +154,7 @@ object Bot {
             ReverseDecree(),
             InvertDecree(),
             TuringTestDecree(),
+            SpeechlessDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
