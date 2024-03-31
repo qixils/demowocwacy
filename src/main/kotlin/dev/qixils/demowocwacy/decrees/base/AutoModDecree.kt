@@ -1,4 +1,4 @@
-package dev.qixils.demowocwacy.decrees
+package dev.qixils.demowocwacy.decrees.base
 
 import dev.minn.jda.ktx.coroutines.await
 import dev.qixils.demowocwacy.Bot
