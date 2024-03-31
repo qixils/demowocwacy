@@ -157,6 +157,7 @@ object Bot {
             SpeechlessDecree(),
             ChatGPTDecree(),
             NoMathDecree(),
+            DeSTEMification(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->

@@ -2,6 +2,7 @@ package dev.qixils.demowocwacy
 
 import dev.qixils.demowocwacy.decrees.HTCConfig
 import dev.qixils.demowocwacy.decrees.OpenAIConfig
+import dev.qixils.demowocwacy.decrees.STEMConfig
 import dev.qixils.demowocwacy.decrees.UnseriousConfig
 import kotlinx.serialization.Serializable
 
@@ -43,4 +44,5 @@ data class DecreeConfig(
     val unserious: UnseriousConfig = UnseriousConfig(),
     val htc: HTCConfig = HTCConfig(),
     val openai: OpenAIConfig = OpenAIConfig(),
+    val stem: STEMConfig = STEMConfig(),
 )
