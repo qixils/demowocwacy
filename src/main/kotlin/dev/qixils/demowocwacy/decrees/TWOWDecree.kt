@@ -13,10 +13,11 @@ class TWOWDecree : Decree(
 ) {
     override suspend fun execute() {
         // TODO: maybe automod rule?
-        Bot.jda.listener<MessageReceivedEvent> {
-            if (!isApplicableTo(it.channel, it.author)) return@listener
-            if (it.message.contentRaw.split(" ").size > 10) {
-                it.message.delete().queue()
+        Bot.jda.listener<MessageReceivedEvent> { event ->
+            if (!isApplicableTo(event.channel, event.author)) return@listener
+            if (event.message.type.isSystem) return@listener
+            if (event.message.contentRaw.split(" ").size > 10) {
+                event.message.delete().queue()
             }
         }
     }

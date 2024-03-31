@@ -8,9 +8,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 
 class DeSTEMification : Decree(
-    "DeSTEMification",
+    "Stexit",
     "\uD83E\uDDEA",
-    "Transition to a new set of topics",
+    "Out with the STEM, in with the...",
     false
 ) {
     private val science = Bot.guild.getTextChannelById(Bot.config.decrees.stem.science)!!

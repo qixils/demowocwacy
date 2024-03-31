@@ -159,6 +159,7 @@ object Bot {
             NoMathDecree(),
             DeSTEMification(),
             DyslexiaDecree(),
+            JanitorDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
