@@ -148,7 +148,7 @@ object Bot {
             UndeleteDecree(),
             HTCDecree(),
             PeanutDecree(),
-            Literally1984(),
+            Literally1984Decree(),
             BlindnessEpidemic(),
             EmbraceChristianityDecree(),
             ReverseDecree(),
