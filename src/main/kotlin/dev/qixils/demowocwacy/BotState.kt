@@ -1,5 +1,6 @@
 package dev.qixils.demowocwacy
 
+import dev.qixils.demowocwacy.decrees.CloneState
 import dev.qixils.demowocwacy.decrees.UnseriousState
 import kotlinx.serialization.Serializable
 
@@ -13,5 +14,6 @@ data class BotState(
 
 @Serializable
 data class DecreeState(
-    var unserious: UnseriousState = UnseriousState(),
+    val unserious: UnseriousState = UnseriousState(),
+    val clone: CloneState = CloneState(),
 )

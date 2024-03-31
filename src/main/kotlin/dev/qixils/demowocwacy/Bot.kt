@@ -161,6 +161,7 @@ object Bot {
             DyslexiaDecree(),
             JanitorDecree(),
             DadDecree(),
+            CloneDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
@@ -303,6 +304,7 @@ object Bot {
                     "For those of you not yet ready to take the reins of power, we still want to hear your voice. " +
                     "A thread will be created for each candidate to discuss their platform and answer questions from you, the people.\n\n" +
                     "Vox populi, vox dei."
+            // TODO: is a thread created?
             components += row(signupButton)
         }
         val message = channel.sendMessage(messageData).await()
@@ -325,10 +327,11 @@ object Bot {
                 if (electionOptions.isNotEmpty()) {
                     append(" support.\n")
                 } else {
-                    append("-- _wait, what's that? uhuh. yep. ok got it, i'll let them know. ok, bye._\n")
+                    append("- _wait, what's that? uhuh. yep. ok got it, i'll let them know. ok, bye._\n")
                     append("It seems that none of you were brave enough to run for office. What a shame. ")
                     append("Not to fear, our elections are protected by contingencies upon contingencies. ")
-                    append("The fearless PRIME_MINISTER_9000 will be stepping in to fulfill the duties of the office until the next election cycle.\n")
+                    append("The fearless **PRIME_MINISTER_9000** will be stepping in to fulfill the duties of the office until the next election cycle. ")
+                    append("Now, as I was saying-\n")
                 }
                 append("The second section is for choosing the decree you wish to see enacted by the new leader. ")
                 append("Only the top three most popular decrees will be considered for enactment, so choose wisely.")
@@ -359,12 +362,12 @@ object Bot {
         message.editMessageComponents(message.components.map { it.asDisabled() }).queue()
         channel.threadChannels.forEach { it.manager.setLocked(true).queue() }
         // tally votes
-        val votes = mutableMapOf<Long, Int>()
-        for (candidate in state.election.candidates)
-            votes[candidate] = 0
-        if (votes.isEmpty()) {
+        if (state.election.candidates.isEmpty()) {
             // TODO: PRIME_MINISTER_9000
         } else {
+            val votes = mutableMapOf<Long, Int>()
+            for (candidate in state.election.candidates)
+                votes[candidate] = 0
             for ((voter, vote) in state.election.candidateVotes.entries) {
                 for (candidate in vote) {
                     if (candidate !in votes) {
@@ -407,6 +410,8 @@ object Bot {
                 winner = winners.first()
             }
             // announce winner
+            state.election.primeMinister = winner
+            saveState()
             // TODO
             // DM decree form to winner (actually maybe don't DM because users can disable them; use a private channel instead?)
             // TODO

@@ -10,4 +10,5 @@ data class ElectionState(
     val tieBreakVotes: MutableMap<Long, Long> = mutableMapOf(), // map of voter IDs to candidate IDs to break ties
     val decreeVotes: MutableMap<Long, String> = mutableMapOf(), // map of voter IDs to chosen decree name
     var decrees: List<String> = emptyList(), // the names of decrees being voted on in this election
+    var primeMinister: Long = 0,
 )
