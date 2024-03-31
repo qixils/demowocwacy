@@ -155,6 +155,7 @@ object Bot {
             InvertDecree(),
             TuringTestDecree(),
             SpeechlessDecree(),
+            ChatGPTDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->

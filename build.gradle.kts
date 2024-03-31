@@ -17,6 +17,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-hocon:${property("serialization.version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:${property("serialization.version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${property("coroutines.version")}")
+    implementation("com.aallam.openai:openai-client:3.7.0")
+    runtimeOnly("io.ktor:ktor-client-okhttp:2.3.9")
 }
 
 tasks.test {
