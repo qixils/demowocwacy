@@ -12,6 +12,7 @@ class TWOWDecree : Decree(
     persistent = true,
 ) {
     override suspend fun execute() {
+        // TODO: maybe automod rule?
         Bot.jda.listener<MessageReceivedEvent> {
             if (!isApplicableTo(it.channel, it.author)) return@listener
             if (it.message.contentRaw.split(" ").size > 10) {

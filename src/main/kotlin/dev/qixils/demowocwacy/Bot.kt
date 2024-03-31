@@ -158,6 +158,7 @@ object Bot {
             ChatGPTDecree(),
             NoMathDecree(),
             DeSTEMification(),
+            DyslexiaDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
