@@ -11,8 +11,7 @@ import dev.minn.jda.ktx.jdabuilder.light
 import dev.minn.jda.ktx.messages.*
 import dev.minn.jda.ktx.util.SLF4J
 import dev.qixils.demowocwacy.decrees.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
@@ -29,6 +28,8 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.requests.GatewayIntent
@@ -51,7 +52,7 @@ object Bot {
     private val configFile = File("bot.conf")
     private val stateFile = File("state.cbor")
     private val signupButton = primary("signup", "Announce Candidacy")
-    private val voteSorter = compareByDescending<Pair<Long, Int>> { it.second }.then(compareBy { it.first })
+    private val voteSorter = compareByDescending<Pair<Comparable<*>, Int>> { it.second }.then(compareBy { it.first })
 
     val jda: JDA
     val logger: Logger by SLF4J
@@ -97,6 +98,12 @@ object Bot {
         get() = jda.getTextChannelById(config.channel)!!
 
     /**
+     * The private channel for the Prime Minister.
+     */
+    val pmChannel: TextChannel
+        get() = jda.getTextChannelById(config.pmChannel)!!
+
+    /**
      * Guild in which the bot is running.
      */
     val guild: Guild
@@ -118,11 +125,7 @@ object Bot {
      * The state of the bot.
      * This is loaded from [stateFile] and saved to it when changed.
      */
-    var state: BotState = if (stateFile.exists()) cbor.decodeFromByteArray(stateFile.readBytes()) else BotState()
-        set(value) {
-            field = value
-            saveState(field)
-        }
+    val state: BotState = if (stateFile.exists()) cbor.decodeFromByteArray(stateFile.readBytes()) else BotState()
 
     init {
         // create default config if it doesn't exist
@@ -237,13 +240,42 @@ object Bot {
             saveState()
             event.reply_(content = "Your desired candidate has been recorded.", ephemeral = true).queue()
         }
+        // init decree listener
+        jda.listener<ButtonInteractionEvent> { event -> coroutineScope {
+            val split = event.button.id?.split(':', limit = 2) ?: return@coroutineScope
+            if (split.size < 2) return@coroutineScope
+            if (split[0] != "pick-decree") return@coroutineScope
+            val decree = pendingDecrees.find { it.name == split[1] }
+            if (decree == null) {
+                event.reply(MessageCreate {
+                    content = "I was unable to find the decree you requested. This may be an error. I apologize. <@140564059417346049>"
+                    mentions { user(140564059417346049L) }
+                }).queue()
+                return@coroutineScope
+            }
+            launch { event.reply("Thank you. **${decree.displayName}** shall be enacted shortly.").await() }
+            launch { event.message.edit(components = event.message.components.map { it.asDisabled() }).await() }
+            launch { startDecree(decree) }
+            // todo public msg
+        }}
     }
 
-    private fun saveState(state: BotState) {
-        stateFile.writeBytes(cbor.encodeToByteArray(state))
+    private suspend fun startDecree(decree: Decree) = coroutineScope {
+        state.selectedDecrees.add(decree.name)
+        state.ignoredDecrees.addAll(pendingDecrees.map { it.name }.filter { it != decree.name })
+        state.election.decrees.clear()
+        state.election.decreeVotes.clear()
+        launch { saveState() }
+        launch { decree.execute() }
     }
 
-    fun saveState() {
+    private suspend fun saveState(state: BotState) {
+        withContext(Dispatchers.IO) {
+            stateFile.writeBytes(cbor.encodeToByteArray(state))
+        }
+    }
+
+    suspend fun saveState() {
         saveState(state)
     }
 
@@ -361,7 +393,22 @@ object Bot {
         // close ballot and threads
         message.editMessageComponents(message.components.map { it.asDisabled() }).queue()
         channel.threadChannels.forEach { it.manager.setLocked(true).queue() }
-        // tally votes
+        // tally decree votes
+        val decrees = mutableMapOf<String, Int>()
+        for (decree in state.election.decrees)
+            decrees[decree] = 0
+        for ((voter, decree) in state.election.decreeVotes.entries) {
+            if (decree !in decrees) {
+                logger.warn("User $voter voted for unknown decree $decree")
+                continue
+            }
+            decrees[decree] = decrees[decree]!! + 1
+        }
+        val topDecrees = decrees.toList()
+            .sortedWith(voteSorter)
+            .take(2) // tie-break doesn't really matter
+            .map { (name, _) -> allDecrees.find { decree -> decree.name == name }!! }
+        // tally election votes
         if (state.election.candidates.isEmpty()) {
             // TODO: PRIME_MINISTER_9000
         } else {
@@ -381,7 +428,7 @@ object Bot {
             val winners = sortedVotes.takeWhile { it.second == sortedVotes.first().second }.map { it.first }
             val winner: Long
             if (winners.size > 1) {
-                // resort to 5min FPTP tie breaker
+                // resort to 5min FPTP tiebreaker
                 state.election.tieBreakCandidates.addAll(winners)
                 channel.sendMessage(MessageCreate {
                     content = buildString {
@@ -412,9 +459,44 @@ object Bot {
             // announce winner
             state.election.primeMinister = winner
             saveState()
-            // TODO
+            channel.sendMessage(buildString {
+                append("Congratulations, <@").append(winner).append(">! ")
+                append("Through the due and just democratic process, a body of your peers have fairly elected you as Prime Minster of ")
+                append(guild.name).append(". ")
+                append("The people now call upon you to pass just one law to bring back peace and stability to our great nation. ")
+                append("Your constituents have helped you narrow it down to just two choices, ")
+                append(topDecrees[0].displayName)
+                append(" or ")
+                append(topDecrees[1].displayName)
+                append(". Please, choose wisely.")
+            })
             // DM decree form to winner (actually maybe don't DM because users can disable them; use a private channel instead?)
-            // TODO
+            pmChannel.sendMessage(MessageCreate {
+                content = buildString {
+                    append("Welcome to your own personal oval office, <@").append(winner).append(">. ")
+                    append("Quickly now, there's no time to waste. ")
+                    append("We need you to pass a new law to help save our country. ")
+                    append("Your constituents have helped narrow it down to two. ")
+                    append("All you need to do now is click below to select which law to enact. ")
+                    append("If you fail to do so in the next 10 minutes, I'll make your choice for you.\n\n")
+                    append("To help you make your choice, I have some extra information on each decree:\n")
+                    append("> **").append(topDecrees[0].displayName).append(":** ").append(topDecrees[0].description).append('\n')
+                    append("> **").append(topDecrees[1].displayName).append(":** ").append(topDecrees[1].description).append('\n')
+                }
+                components += row(
+                    button("pick-decree:${topDecrees[0].name}", topDecrees[0].name, topDecrees[0].emoji, ButtonStyle.PRIMARY),
+                    button("pick-decree:${topDecrees[1].name}", topDecrees[1].name, topDecrees[1].emoji, ButtonStyle.PRIMARY),
+                )
+                mentions { user(winner) }
+            })
+            // wait 10 minutes then make choice
+            // TODO: wait
+            if (state.election.decrees.isEmpty()) return
+            // TODO: disable components
+            val decree = topDecrees.random()
+            // todo pm msg
+            // todo public msg
+            startDecree(decree)
         }
     }
 }

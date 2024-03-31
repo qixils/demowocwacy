@@ -13,6 +13,8 @@ data class BotConfig(
     val guild: Long = 0,
     // Channel ID to send election messages in
     val channel: Long = 0,
+    // Channel ID to send messages to the Prime Minister in
+    val pmChannel: Long = 0,
     // Channel IDs not effected by event shenanigans
     val protectedChannels: List<Long> = emptyList(),
     // User IDs not effected by event shenanigans
