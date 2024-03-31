@@ -23,21 +23,23 @@ abstract class Decree(
 
     abstract suspend fun execute()
 
-    fun isApplicableTo(channel: Channel): Boolean {
-        if (channel !is GuildChannel) return false
-        if (!Bot.isInGuild(channel)) return false
-        if (channel.idLong in Bot.config.protectedChannels) return false
-        if (channel is ICategorizableChannel && channel.parentCategoryIdLong in Bot.config.protectedChannels) return false
-        if (channel is ThreadChannel && channel.parentChannel.idLong in Bot.config.protectedChannels) return false
-        return true
-    }
-
-    fun isApplicableTo(channel: Channel, author: User): Boolean {
-        if (!isApplicableTo(channel)) return false
-        if (author.idLong in Bot.config.protectedUsers) return false
-        return true
-    }
-
     open suspend fun cleanup() {
+    }
+
+    companion object {
+        fun isApplicableTo(channel: Channel): Boolean {
+            if (channel !is GuildChannel) return false
+            if (!Bot.isInGuild(channel)) return false
+            if (channel.idLong in Bot.config.protectedChannels) return false
+            if (channel is ICategorizableChannel && channel.parentCategoryIdLong in Bot.config.protectedChannels) return false
+            if (channel is ThreadChannel && channel.parentChannel.idLong in Bot.config.protectedChannels) return false
+            return true
+        }
+
+        fun isApplicableTo(channel: Channel, author: User): Boolean {
+            if (!isApplicableTo(channel)) return false
+            if (author.idLong in Bot.config.protectedUsers) return false
+            return true
+        }
     }
 }
