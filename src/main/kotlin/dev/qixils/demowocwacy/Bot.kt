@@ -60,8 +60,8 @@ object Bot {
     private val stateFile = File("state.cbor")
     private val signupButton = primary("signup", "Announce Candidacy")
     private val voteSorter = compareByDescending<Pair<Comparable<*>, Int>> { it.second }.then(compareBy { it.first })
-    private val decreePublicCount = 3
-    private val decreePrivateCount = 2
+    private const val decreePublicCount = 3
+    private const val decreePrivateCount = 2
 
     val jda: JDA
     val logger: Logger by SLF4J
@@ -222,6 +222,7 @@ object Bot {
             FalseDemocracyDecree(),
             EgalitarianismDecree(),
             EmojiDecree(),
+            FacebookDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
@@ -393,9 +394,17 @@ object Bot {
     @JvmStatic
     fun main(args: Array<String>) {
         runBlocking {
+            // avoid restarting decrees on accident
+            if (state.nextTask == Task.SLEEP) {
+                handleSleepTask()
+                return@runBlocking
+            }
+
             jda.awaitReady()
+
             // init active decrees
             selectedDecrees.filter(Decree::persistent).forEach { launch { it.execute(false) } }
+
             // loop
             while (true) {
                 handleElection()
@@ -440,11 +449,7 @@ object Bot {
             Task.WELCOME_PM -> handleWelcomePMTask()
             Task.PM_TIMEOUT -> handlePMTimeoutTask()
             Task.GOODBYE -> handleGoodbyeTask()
-            Task.SLEEP -> {
-                jda.shutdown()
-                jda.awaitShutdown()
-                exitProcess(0)
-            }
+            Task.SLEEP -> handleSleepTask()
         }
     }
 
@@ -461,9 +466,16 @@ object Bot {
         saveState()
 
         guild.manager.setName("HTwins STEM+").await()
+        guild.updateCommands().await()
         for (decree in selectedDecrees) {
             decree.cleanup()
         }
+    }
+
+    private fun handleSleepTask() {
+        jda.shutdown()
+        jda.awaitShutdown()
+        exitProcess(0)
     }
 
     private suspend fun handleOpenRegistrationTask() {
