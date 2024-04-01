@@ -469,7 +469,9 @@ object Bot {
 
         // tally candidate votes
         if (state.election.candidates.isEmpty()) {
-            // TODO: PRIME_MINISTER_9000
+            state.election.primeMinister = 0
+            state.nextTask = Task.PM_TIMEOUT
+            saveState()
             return@coroutineScope
         }
 
@@ -569,13 +571,13 @@ object Bot {
                 append("Your constituents have helped narrow it down to two. ")
                 append("All you need to do now is click below to select which law to enact. ")
                 append("If you fail to do so in the next 10 minutes, I'll make your choice for you.\n\n")
-                append("To help you make your choice, I have some extra information on each decree:\n")
-                append("> **").append(topDecrees[0].displayName).append(":** ").append(topDecrees[0].description).append('\n')
-                append("> **").append(topDecrees[1].displayName).append(":** ").append(topDecrees[1].description).append('\n')
+                append("To help you make your choice, I have some extra information on each decree:\n>>>")
+                for (decree in topDecrees) {
+                    append("**").append(decree.displayName).append(":** ").append(decree.description).append('\n')
+                }
             }
             components += row(
-                button("pick-decree:${topDecrees[0].name}", topDecrees[0].name, topDecrees[0].emoji, ButtonStyle.PRIMARY),
-                button("pick-decree:${topDecrees[1].name}", topDecrees[1].name, topDecrees[1].emoji, ButtonStyle.PRIMARY),
+                *topDecrees.map { button("pick-decree:${it.name}", it.name, it.emoji, ButtonStyle.PRIMARY) }.toTypedArray()
             )
             mentions { user(state.election.primeMinister) }
         }).await().idLong
@@ -586,7 +588,7 @@ object Bot {
 
     private suspend fun handlePMTimeoutTask() = coroutineScope {
         // wait until XX:00
-        delayUntil(15.minutes)
+        delayUntil(20.minutes)
 
         // check this is still the right task
         // TODO: so if I want to do this every 2 hours still
@@ -595,26 +597,40 @@ object Bot {
         //  and then the next task again waits for :00
         //  yeah??? idk
         if (state.nextTask != Task.PM_TIMEOUT) return@coroutineScope
-
-        if (state.election.decrees.isEmpty()) return@coroutineScope
-        if (state.election.decreeFormMessage == 0L) return@coroutineScope
-
-        closeMessage(state.election.decreeFormMessage, "decree form") // gets closed in startDecree
+        if (state.election.decrees.isEmpty()) return@coroutineScope // uhh
 
         val topDecrees = tallyDecreeVotes()
         val decree = topDecrees.random()
+
+        if (state.election.primeMinister != 0L) {
+            closeMessage(state.election.decreeFormMessage, "decree form") // gets closed in startDecree
+            launch { channel.sendMessage(buildString {
+                append("I see you are indecisive. Very well. As your loyal vice prime minister, I shall enact a law for you. Good day.")
+            }).await() }
+        }
+
         launch { channel.sendMessage(buildString {
-            append("I see you are indecisive. Very well. As your loyal vice prime minister, I shall enact a law for you. Good day.")
-        }).await() }
-        launch { channel.sendMessage(buildString {
-            append("Your Prime Minister has failed to pass a law, and so as their loyal vice prime minister I have chosen to enact **")
+            if (state.election.primeMinister == 0L) {
+                append("HELLO >w< IT IS I, PRIME_MINISTER_9000 UwU~! ")
+                append("I HAVE COME TO FULFILL THE MORAL OBLIGATIONS OF A SITTING PRIME MINISTER SINCE NOBODY ELSE WANTED TO ^.^ ")
+                append("AS P.M., MY FIRST ACTION IS TO ENACT ")
+            } else {
+                append("Your Prime Minister has failed to pass a law, and so as their loyal vice prime minister I have chosen to enact ")
+            }
+            append("**")
             append(decree.displayName)
             append("**: ")
             append(decree.description)
-            append("\nGlory to ")
-            append(guild.name)
-            append(".")
+            append('\n')
+            if (state.election.primeMinister == 0L) {
+                append("PLEASE ENJOY \\o/")
+            } else {
+                append("Glory to ")
+                append(guild.name)
+                append(".")
+            }
         }).await() }
+
         launch { startDecree(decree) } // handles the usual task update + save
     }
 }
