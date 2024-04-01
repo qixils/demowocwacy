@@ -215,6 +215,7 @@ object Bot {
             VetoDecree(),
             SocialCreditDecree(),
             ChaChaSlideDecree(),
+            CommunismDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->

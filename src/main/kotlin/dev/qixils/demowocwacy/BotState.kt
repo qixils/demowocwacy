@@ -1,9 +1,6 @@
 package dev.qixils.demowocwacy
 
-import dev.qixils.demowocwacy.decrees.ChaChaSlideState
-import dev.qixils.demowocwacy.decrees.CloneState
-import dev.qixils.demowocwacy.decrees.UnseriousState
-import dev.qixils.demowocwacy.decrees.VetoState
+import dev.qixils.demowocwacy.decrees.*
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -21,6 +18,7 @@ data class DecreeState(
     val clone: CloneState = CloneState(),
     val veto: VetoState = VetoState(),
     val chaChaSlide: ChaChaSlideState = ChaChaSlideState(),
+    val communism: CommunismState = CommunismState(),
 )
 
 enum class Task {
