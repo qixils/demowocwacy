@@ -45,4 +45,5 @@ data class DecreeConfig(
     val openai: OpenAIConfig = OpenAIConfig(),
     val stem: STEMConfig = STEMConfig(),
     val disease: EmbraceDiseaseConfig = EmbraceDiseaseConfig(),
+    val socialCredit: SocialCreditConfig = SocialCreditConfig(),
 )

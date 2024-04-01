@@ -35,7 +35,7 @@ class EmbraceDiseaseDecree : Decree(
                 try {
                     Bot.guild.addRoleToMember(user, role)
                 } catch (e: Exception) {
-                    Bot.logger.warn("Failed to infect user $user", e)
+                    Bot.logger.warn("Failed to infect user ${user.id}", e)
                 }
             }
         }

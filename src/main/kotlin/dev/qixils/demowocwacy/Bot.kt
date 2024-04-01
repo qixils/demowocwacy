@@ -19,6 +19,7 @@ import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.hocon.Hocon
 import kotlinx.serialization.hocon.decodeFromConfig
 import kotlinx.serialization.hocon.encodeToConfig
+import kotlinx.serialization.json.Json
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
@@ -48,7 +49,8 @@ object Bot {
     val hocon = Hocon {
         useConfigNamingConvention = true
     }
-    val cbor = Cbor {  }
+    val cbor = Cbor
+    val json = Json
 
     private val configFile = File("bot.conf")
     private val stateFile = File("state.cbor")
@@ -207,6 +209,7 @@ object Bot {
             R9KDecree(),
             DoNotPassThisDecree(),
             VetoDecree(),
+            SocialCreditDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
