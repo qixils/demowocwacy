@@ -4,11 +4,11 @@ import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.listener
 import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
+import kotlinx.serialization.Serializable
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent
 import net.dv8tion.jda.api.utils.TimeUtil
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
+import java.time.Instant
 
 class JanitorDecree : Decree(
     "Janitor",
@@ -16,15 +16,22 @@ class JanitorDecree : Decree(
     "Allow deleting any message by popular vote",
     true
 ) {
-    private val start = OffsetDateTime.of(2024, 4, 1, 0, 0, 0, 0, ZoneOffset.UTC)
+    private var start: Instant
+        get() = Instant.parse(Bot.state.decrees.janitor.start)
+        set(value) {
+            Bot.state.decrees.janitor.start = value.toString()
+        }
     private val react = Emoji.fromUnicode("\uD83D\uDDD1\uFE0F")
     private val amount = 10
 
     override suspend fun execute(init: Boolean) {
+        if (init) {
+            start = Instant.now()
+        }
         Bot.jda.listener<MessageReactionAddEvent> { event ->
             if (!isApplicableTo(event.channel)) return@listener
             if (event.emoji != react) return@listener
-            if (TimeUtil.getTimeCreated(event.messageIdLong).isBefore(start)) return@listener
+            if (TimeUtil.getTimeCreated(event.messageIdLong).toInstant().isBefore(start)) return@listener
 
             val message = event.retrieveMessage().await()
 
@@ -35,3 +42,8 @@ class JanitorDecree : Decree(
         }
     }
 }
+
+@Serializable
+data class JanitorState(
+    var start: String = Instant.MIN.toString(),
+)

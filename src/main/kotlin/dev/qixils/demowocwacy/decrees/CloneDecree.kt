@@ -15,8 +15,10 @@ class CloneDecree : Decree(
     true
 ) {
     override suspend fun execute(init: Boolean) {
-        Bot.state.decrees.clone.user = Bot.state.election.primeMinister
-        Bot.saveState()
+        if (init) {
+            Bot.state.decrees.clone.user = Bot.state.election.primeMinister
+            Bot.saveState()
+        }
 
         Bot.jda.listener<MessageReceivedEvent> { event ->
             val channel = event.channel
