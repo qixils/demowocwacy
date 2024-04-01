@@ -2,6 +2,7 @@ package dev.qixils.demowocwacy
 
 import dev.qixils.demowocwacy.decrees.CloneState
 import dev.qixils.demowocwacy.decrees.UnseriousState
+import dev.qixils.demowocwacy.decrees.VetoState
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -17,6 +18,7 @@ data class BotState(
 data class DecreeState(
     val unserious: UnseriousState = UnseriousState(),
     val clone: CloneState = CloneState(),
+    val veto: VetoState = VetoState(),
 )
 
 enum class Task {

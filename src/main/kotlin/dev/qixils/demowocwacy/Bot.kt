@@ -93,6 +93,18 @@ object Bot {
         get() = allDecrees.filter { it.name !in state.selectedDecrees && it.name !in state.ignoredDecrees && it.name !in state.election.decrees }
 
     /**
+     * Decrees that have been seen during past elections.
+     */
+    val seenDecrees: List<Decree>
+        get() = allDecrees.filter { it.name in state.selectedDecrees || it.name in state.ignoredDecrees }
+
+    /**
+     * Gets the most recently passed decree.
+     */
+    val lastDecree: Decree
+        get() = selectedDecrees.last()
+
+    /**
      * Channel in which elections are held.
      */
     val channel: TextChannel
@@ -194,6 +206,7 @@ object Bot {
             GentlepeopleDecree(),
             R9KDecree(),
             DoNotPassThisDecree(),
+            VetoDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
@@ -308,7 +321,7 @@ object Bot {
         state.nextTask = Task.OPEN_REGISTRATION
         state.election.decreeFormMessage = 0L
         state.selectedDecrees.add(decree.name)
-        state.ignoredDecrees.addAll(pendingDecrees.map { it.name }.filter { it != decree.name })
+        state.ignoredDecrees.addAll(state.election.decrees.filter { it != decree.name })
         state.election.decrees.clear()
         state.election.decreeVotes.clear()
         saveState()
@@ -396,7 +409,7 @@ object Bot {
         delayUntil(duration.inWholeMilliseconds)
     }
 
-    private suspend fun closeMessage(id: Long, name: String) {
+    suspend fun closeMessage(id: Long, name: String) {
         if (id == 0L) {
             logger.warn("Could not find $name message to disable components")
         } else {
@@ -424,6 +437,8 @@ object Bot {
         // wait for start of election cycle (top of the hour)
         delayUntil(1.hours)
 
+        lastDecree.onStartTask(Task.OPEN_REGISTRATION)
+
         // put signup form in elections channel
         val messageData = MessageCreate {
             content = "The time has come to elect a new leader to bring our nation to glorious greatness! " +
@@ -444,9 +459,17 @@ object Bot {
         // sleep until XX:30
         delayUntil(30.minutes)
 
+        lastDecree.onStartTask(Task.OPEN_BALLOT)
+
         // close signup form
         closeMessage(state.election.signupFormMessage, "signup form")
         state.election.signupFormMessage = 0L
+
+        // pick decrees
+        state.election.decrees += remainingDecrees.shuffled()
+            .filter { it !is VetoDecree || state.selectedDecrees.isNotEmpty() } // hardcode to ensure veto doesn't come up first
+            .take(3)
+            .map { it.name }
 
         // announce ballot
         val electionOptions = state.election.candidates
@@ -495,6 +518,8 @@ object Bot {
     private suspend fun handleCloseBallotTask() = coroutineScope {
         // sleep until XX:40
         delayUntil(10.minutes)
+
+        lastDecree.onStartTask(Task.CLOSE_BALLOT)
 
         // close ballot
         closeMessage(state.election.ballotFormMessage, "signup form")
@@ -564,6 +589,8 @@ object Bot {
         // sleep until XX:45
         delayUntil(5.minutes)
 
+        lastDecree.onStartTask(Task.CLOSE_TIEBREAK)
+
         // close ballot
         closeMessage(state.election.tieBreakFormMessage, "tie-break form")
         state.election.tieBreakFormMessage = 0L
@@ -588,6 +615,8 @@ object Bot {
     }
 
     private suspend fun handleWelcomePMTask() = coroutineScope {
+        lastDecree.onStartTask(Task.WELCOME_PM)
+
         val topDecrees = tallyDecreeVotes()
 
         // send welcomes
@@ -641,6 +670,8 @@ object Bot {
         //  yeah??? idk
         if (state.nextTask != Task.PM_TIMEOUT) return@coroutineScope
         if (state.election.decrees.isEmpty()) return@coroutineScope // uhh
+
+        lastDecree.onStartTask(Task.PM_TIMEOUT)
 
         val topDecrees = tallyDecreeVotes()
         val decree = topDecrees.random()

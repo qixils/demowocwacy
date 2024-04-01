@@ -31,6 +31,9 @@ abstract class Decree(
     open suspend fun cleanup() {
     }
 
+    open suspend fun onStartTask(task: Task) {
+    }
+
     companion object {
         fun isApplicableTo(channel: Channel): Boolean {
             if (channel !is GuildChannel) return false

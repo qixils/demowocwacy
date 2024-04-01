@@ -20,7 +20,7 @@ class GentlepeopleDecree : Decree(
 
             val content = event.message.contentRaw
             if (content.isEmpty()) return@listener
-            if ((content[0].isUpperCase() || content[0] in punctuation) && content[content.length-1] in punctuation) return@listener
+            if ((content[0].isUpperCase() || content[0] in punctuation) && content.last() in punctuation) return@listener
 
             event.message.delete().await()
         }
