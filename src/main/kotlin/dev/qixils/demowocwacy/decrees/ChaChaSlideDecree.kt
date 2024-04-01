@@ -48,7 +48,7 @@ class ChaChaSlideDecree : Decree(
             action.shuffleOrder()
             for (channel in action.currentOrder) {
                 // ensure inapplicable channels maintain their order
-                if (isApplicableTo(channel)) continue
+                if (channel.idLong in Bot.config.protectedChannels) continue
                 val destination = Bot.state.decrees.chaChaSlide.order[channel.idLong] ?: continue
                 action.selectPosition(channel).moveTo(destination)
             }

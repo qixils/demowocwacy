@@ -224,6 +224,7 @@ object Bot {
             EmojiDecree(),
             FacebookDecree(),
             ASMRDecree(),
+            SlowmodeDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->

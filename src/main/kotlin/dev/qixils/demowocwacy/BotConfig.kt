@@ -49,4 +49,5 @@ data class DecreeConfig(
     val chaChaSlide: ChaChaSlideConfig = ChaChaSlideConfig(),
     val communism: CommunismConfig = CommunismConfig(),
     val falseDemocracy: FalseDemocracyConfig = FalseDemocracyConfig(),
+    val slowmode: SlowmodeConfig = SlowmodeConfig(),
 )
