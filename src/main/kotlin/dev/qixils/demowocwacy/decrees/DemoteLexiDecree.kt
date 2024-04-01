@@ -10,7 +10,7 @@ class DemoteLexiDecree : Decree(
     "Vanquishes the final staff member of a bygone era",
     false,
 ) {
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         val guild = Bot.guild
         val lexi = guild.retrieveOwner().await()
         guild.modifyMemberRoles(lexi, emptyList(), Bot.config.roles.staff.mapNotNull { guild.getRoleById(it) }).await()

@@ -11,7 +11,7 @@ class TWOWDecree : Decree(
     "Users will no longer be able to send messages larger than ten words",
     persistent = true,
 ) {
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         // TODO: maybe automod rule?
         Bot.jda.listener<MessageReceivedEvent> { event ->
             if (!isApplicableTo(event.channel, event.author)) return@listener

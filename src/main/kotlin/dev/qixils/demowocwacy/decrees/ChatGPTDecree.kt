@@ -40,7 +40,7 @@ class ChatGPTDecree : Decree(
 
     private val messages = mutableMapOf<Long, MutableList<ChatMessage>>()
 
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
             if (!isApplicableTo(event.channel, event.author)) return@listener
             if (event.message.type.isSystem) return@listener

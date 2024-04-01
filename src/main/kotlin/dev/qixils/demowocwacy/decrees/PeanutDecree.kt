@@ -11,10 +11,11 @@ class PeanutDecree : Decree(
     "peanuts",
     true,
 ) {
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         Bot.guild.publicRole.manager.revokePermissions(Permission.NICKNAME_CHANGE).await()
         for (member in Bot.guild.members) {
             if (member.nickname != null) {
+                // TODO: save & revert
                 Bot.logger.info("Changing nickname of user $member from ${member.nickname}")
             }
             member.modifyNickname("\uD83E\uDD5C").await()

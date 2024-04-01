@@ -31,7 +31,7 @@ class UndeleteDecree : Decree(
         }, maxAge, 1, TimeUnit.MINUTES)
     }
 
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
             if (!isApplicableTo(event.channel, event.author)) return@listener
             if (event.message.type.isSystem) return@listener

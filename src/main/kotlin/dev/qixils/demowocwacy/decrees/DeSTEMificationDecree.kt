@@ -18,7 +18,7 @@ class DeSTEMification : Decree(
     private val engineering = Bot.guild.getTextChannelById(Bot.config.decrees.stem.engineering)!!
     private val mathematics = Bot.guild.getTextChannelById(Bot.config.decrees.stem.mathematics)!!
 
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         val selections = withContext(Dispatchers.IO) {
             val words = javaClass.getResourceAsStream("words.txt")!!.reader().readLines()
             words.shuffled().take(4)

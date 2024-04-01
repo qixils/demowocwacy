@@ -11,7 +11,7 @@ class BlindnessEpidemic : Decree(
     "Reduce the visibility of messages",
     false
 ) {
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         val override = Bot.unserious.getPermissionOverride(Bot.guild.publicRole)
         val allow = override?.allowed ?: emptySet()
         val deny = (override?.denied ?: emptySet()) + Permission.MESSAGE_HISTORY

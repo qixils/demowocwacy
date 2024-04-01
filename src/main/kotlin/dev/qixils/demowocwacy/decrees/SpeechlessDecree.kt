@@ -12,7 +12,7 @@ class SpeechlessDecree : Decree(
     "Remove the need for ordinary speech",
     true
 ) {
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
             if (!isApplicableTo(event.channel, event.author)) return@listener
             if (event.message.type.isSystem) return@listener

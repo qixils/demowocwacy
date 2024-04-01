@@ -114,7 +114,7 @@ object Bot {
      * Role for Familiar users.
      */
     val familiar: Role
-        get() = jda.getRoleById(config.roles.familiar)!!
+        get() = guild.getRoleById(config.roles.familiar)!!
 
     /**
      * Unserious channel.
@@ -126,25 +126,25 @@ object Bot {
      * Role for the current Prime Minister
      */
     val currentLeaderRole: Role
-        get() = jda.getRoleById(config.roles.currentLeader)!!
+        get() = guild.getRoleById(config.roles.currentLeader)!!
 
     /**
      * Role for the past Prime Ministers
      */
     val pastLeaderRole: Role
-        get() = jda.getRoleById(config.roles.pastLeader)!!
+        get() = guild.getRoleById(config.roles.pastLeader)!!
 
     /**
      * Role for the current election candidates
      */
     val candidateRole: Role
-        get() = jda.getRoleById(config.roles.candidate)!!
+        get() = guild.getRoleById(config.roles.candidate)!!
 
     /**
      * Role for past voters
      */
     val voterRole: Role
-        get() = jda.getRoleById(config.roles.voter)!!
+        get() = guild.getRoleById(config.roles.voter)!!
 
     /**
      * The state of the bot.
@@ -163,8 +163,7 @@ object Bot {
         config = hocon.decodeFromConfig(configNode)
         // build JDA
         jda = light(config.token, enableCoroutines=true) {
-            // I don't think I need member updates/joins/leaves but if I do the intent is GUILD_MEMBERS
-            intents += GatewayIntent.MESSAGE_CONTENT
+            intents += setOf(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MEMBERS)
         }
         // disable @everyone pings
         MessageRequest.setDefaultMentions(emptySet())
@@ -190,6 +189,7 @@ object Bot {
             JanitorDecree(),
             DadDecree(),
             CloneDecree(),
+            EmbraceDiseaseDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
@@ -308,7 +308,7 @@ object Bot {
         state.election.decrees.clear()
         state.election.decreeVotes.clear()
         saveState()
-        decree.execute()
+        decree.execute(true)
     }
 
     private suspend fun saveState(state: BotState) {
@@ -363,7 +363,7 @@ object Bot {
         runBlocking {
             jda.awaitReady()
             // init active decrees
-            selectedDecrees.filter(Decree::persistent).forEach { it.execute() }
+            selectedDecrees.filter(Decree::persistent).forEach { it.execute(false) }
             // loop
             while (true) {
                 // abort after April 1st

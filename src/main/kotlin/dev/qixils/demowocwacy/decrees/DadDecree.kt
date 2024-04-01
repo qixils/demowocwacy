@@ -15,7 +15,7 @@ class DadDecree : Decree(
 ) {
     private val pattern = Regex("I(?:'| +a)m +(.+)", setOf(RegexOption.IGNORE_CASE))
 
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
             if (!isApplicableTo(event.channel, event.author)) return@listener
             if (event.message.type.isSystem) return@listener

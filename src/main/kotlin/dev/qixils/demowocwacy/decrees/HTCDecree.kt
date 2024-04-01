@@ -18,7 +18,7 @@ class HTCDecree : Decree(
         private const val FALLBACK = "https://cdn.discordapp.com/icons/184755239952318464/a_986b6070401b3d2053ea35b6252c6ac9.gif"
     }
 
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         val sourceGuild = Bot.jda.getGuildById(Bot.config.decrees.htc.guild)
         val destGuild = Bot.jda.getGuildById(Bot.config.guild)!!
         val image: ImageProxy = sourceGuild?.icon ?: ImageProxy(FALLBACK)

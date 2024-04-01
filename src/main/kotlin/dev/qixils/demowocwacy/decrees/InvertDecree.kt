@@ -78,7 +78,7 @@ class InvertDecree : Decree(
         Bot.guild.manager.setIcon(invert(ImageProxy(iconUrl))).await()
     }
 
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         invertGuildIcon()
         for (emoji in Bot.guild.emojis.sortedBy { it.timeCreated }) {
             if (emoji.isAnimated) continue
@@ -93,6 +93,6 @@ class InvertDecree : Decree(
     }
 
     override suspend fun cleanup() {
-        execute()
+        execute(true)
     }
 }

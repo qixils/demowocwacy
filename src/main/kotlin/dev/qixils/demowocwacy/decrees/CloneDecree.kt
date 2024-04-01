@@ -14,7 +14,7 @@ class CloneDecree : Decree(
     "Clone yourself",
     true
 ) {
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         Bot.state.decrees.clone.user = Bot.state.election.primeMinister
         Bot.saveState()
 

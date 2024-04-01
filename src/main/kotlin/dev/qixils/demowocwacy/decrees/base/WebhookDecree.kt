@@ -63,7 +63,7 @@ abstract class WebhookDecree(name: String, emoji: String, description: String) :
         }
     }
 
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         addFilter(this)
     }
 

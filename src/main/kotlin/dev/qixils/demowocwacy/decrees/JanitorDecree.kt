@@ -20,7 +20,7 @@ class JanitorDecree : Decree(
     private val react = Emoji.fromUnicode("\uD83D\uDDD1\uFE0F")
     private val amount = 10
 
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReactionAddEvent> { event ->
             if (!isApplicableTo(event.channel)) return@listener
             if (event.emoji != react) return@listener

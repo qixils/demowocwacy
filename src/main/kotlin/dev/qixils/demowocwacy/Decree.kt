@@ -21,7 +21,12 @@ abstract class Decree(
     val displayName: String
         get() = "${emoji.formatted} $name"
 
-    abstract suspend fun execute()
+    /**
+     * Executes this decree.
+     *
+     * @param init Whether this is the first execution of the decree.
+     */
+    abstract suspend fun execute(init: Boolean)
 
     open suspend fun cleanup() {
     }

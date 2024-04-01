@@ -15,7 +15,7 @@ class UnseriousDecree : Decree(
     "Archives all discussion channels in favor of #unserious",
     false
 ) {
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         val storage: MutableMap<Long, Pair<Long?, Int>> = mutableMapOf()
         val category: Category = Bot.guild.getCategoryById(Bot.config.decrees.unserious.hiddenCategory)!!
         for (channelId in Bot.config.decrees.unserious.discussionChannels) {

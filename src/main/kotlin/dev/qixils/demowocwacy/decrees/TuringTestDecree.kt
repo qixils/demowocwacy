@@ -122,7 +122,7 @@ class TuringTestDecree : Decree(
         it.reply_(captcha.question, components = listOf(row(component)), ephemeral = true).await()
     }
 
-    override suspend fun execute() {
+    override suspend fun execute(init: Boolean) {
         Bot.guild.upsertCommand("verify", "Complete a CAPTCHA to validate your humanity")
 
         Bot.jda.listener<MessageReceivedEvent> { event ->
