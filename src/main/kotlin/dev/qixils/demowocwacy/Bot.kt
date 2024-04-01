@@ -193,7 +193,7 @@ object Bot {
             NoFifthGlyphDecree(),
             GentlepeopleDecree(),
             R9KDecree(),
-            DoNotPassThisLawDecree(),
+            DoNotPassThisDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
