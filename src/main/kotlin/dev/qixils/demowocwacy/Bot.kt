@@ -230,7 +230,7 @@ object Bot {
             event.reply_(content = "Your desired decree has been recorded.", ephemeral = true).queue()
         }
         jda.onStringSelect("vote:tiebreak") { event ->
-            // candidate tie break
+            // candidate tie-break
             val candidate = event.selectedOptions.first().value.toLong()
             if (candidate !in state.election.tieBreakCandidates) {
                 event.reply_(content = "That candidate is not currently available to vote on.", ephemeral = true).queue()
@@ -253,7 +253,6 @@ object Bot {
                 }).queue()
                 return@coroutineScope
             }
-            state.nextTask = Task.OPEN_REGISTRATION // gets saved in startDecree
             launch { event.reply("Thank you. **${decree.displayName}** shall be enacted shortly.").await() }
             launch { channel.sendMessage(buildString {
                 append("Your Prime Minister has returned with their decree. Effective immediately, **")
@@ -270,13 +269,14 @@ object Bot {
     }
 
     private suspend fun startDecree(decree: Decree) = coroutineScope {
+        state.nextTask = Task.OPEN_REGISTRATION
         state.election.decreeFormMessage = 0L
         state.selectedDecrees.add(decree.name)
         state.ignoredDecrees.addAll(pendingDecrees.map { it.name }.filter { it != decree.name })
         state.election.decrees.clear()
         state.election.decreeVotes.clear()
-        launch { saveState() }
-        launch { decree.execute() }
+        saveState()
+        decree.execute()
     }
 
     private suspend fun saveState(state: BotState) {
@@ -396,7 +396,6 @@ object Bot {
                     "For those of you not yet ready to take the reins of power, we still want to hear your voice. " +
                     "A thread will be created for each candidate to discuss their platform and answer questions from you, the people.\n\n" +
                     "Vox populi, vox dei."
-            // TODO: is a thread created?
             components += row(signupButton)
         }
 
@@ -488,6 +487,10 @@ object Bot {
         }
         val sortedVotes = votes.toList().sortedWith(voteSorter)
         val winners = sortedVotes.takeWhile { it.second == sortedVotes.first().second }.map { it.first }
+
+        state.election.candidates.clear()
+        state.election.candidateVotes.clear()
+
         if (winners.size == 1) {
             state.election.primeMinister = winners[0]
             state.nextTask = Task.WELCOME_PM
@@ -534,6 +537,7 @@ object Bot {
         val newSortedVotes = votes.toList().sortedWith(voteSorter)
 
         // save data
+        state.election.tieBreakVotes.clear()
         state.election.tieBreakCandidates.clear()
         state.election.primeMinister = newSortedVotes.takeWhile { it.second == newSortedVotes.first().second }.map { it.first }.random()
         state.nextTask = Task.WELCOME_PM
@@ -595,8 +599,7 @@ object Bot {
         if (state.election.decrees.isEmpty()) return@coroutineScope
         if (state.election.decreeFormMessage == 0L) return@coroutineScope
 
-        closeMessage(state.election.decreeFormMessage, "decree form")
-        state.election.decreeFormMessage = 0L
+        closeMessage(state.election.decreeFormMessage, "decree form") // gets closed in startDecree
 
         val topDecrees = tallyDecreeVotes()
         val decree = topDecrees.random()
@@ -612,9 +615,6 @@ object Bot {
             append(guild.name)
             append(".")
         }).await() }
-        launch { startDecree(decree) }
-
-        state.nextTask = Task.OPEN_REGISTRATION
-        saveState()
+        launch { startDecree(decree) } // handles the usual task update + save
     }
 }
