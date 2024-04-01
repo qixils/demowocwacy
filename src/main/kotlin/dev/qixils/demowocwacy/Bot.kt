@@ -24,6 +24,7 @@ import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.UserSnowflake
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.entities.emoji.Emoji
@@ -122,6 +123,30 @@ object Bot {
         get() = jda.getTextChannelById(config.decrees.unserious.channel)!!
 
     /**
+     * Role for the current Prime Minister
+     */
+    val currentLeaderRole: Role
+        get() = jda.getRoleById(config.roles.currentLeader)!!
+
+    /**
+     * Role for the past Prime Ministers
+     */
+    val pastLeaderRole: Role
+        get() = jda.getRoleById(config.roles.pastLeader)!!
+
+    /**
+     * Role for the current election candidates
+     */
+    val candidateRole: Role
+        get() = jda.getRoleById(config.roles.candidate)!!
+
+    /**
+     * Role for past voters
+     */
+    val voterRole: Role
+        get() = jda.getRoleById(config.roles.voter)!!
+
+    /**
      * The state of the bot.
      * This is loaded from [stateFile] and saved to it when changed.
      */
@@ -201,6 +226,7 @@ object Bot {
                 // save candidate to state
                 state.election.candidates.add(event.user.idLong)
                 saveState()
+                guild.addRoleToMember(event.user, candidateRole).queue()
                 // create thread for candidate/platform
                 val platform = event.getValue("form:signup:platform")?.asString ?: return@listener
                 val message = channel.send(
@@ -218,6 +244,8 @@ object Bot {
             state.election.candidateVotes[event.user.idLong] = event.selectedOptions.map{ it.value.toLong() }.filter { state.election.candidates.contains(it) }
             saveState()
             event.reply_(content = "Your approved candidates have been recorded.", ephemeral = true).queue()
+            if (voterRole !in event.member!!.roles)
+                guild.addRoleToMember(event.user, voterRole).queue()
         }
         jda.onStringSelect("vote:decree") { event ->
             val decree = event.selectedOptions.first().value
@@ -228,6 +256,8 @@ object Bot {
             state.election.decreeVotes[event.user.idLong] = decree
             saveState()
             event.reply_(content = "Your desired decree has been recorded.", ephemeral = true).queue()
+            if (voterRole !in event.member!!.roles)
+                guild.addRoleToMember(event.user, voterRole).queue()
         }
         jda.onStringSelect("vote:tiebreak") { event ->
             // candidate tie-break
@@ -239,6 +269,8 @@ object Bot {
             state.election.tieBreakVotes[event.user.idLong] = candidate
             saveState()
             event.reply_(content = "Your desired candidate has been recorded.", ephemeral = true).queue()
+            if (voterRole !in event.member!!.roles)
+                guild.addRoleToMember(event.user, voterRole).queue()
         }
         // init decree listener
         jda.listener<ButtonInteractionEvent> { event -> coroutineScope {
@@ -466,6 +498,11 @@ object Bot {
 
         // close threads
         launch { channel.threadChannels.forEach { it.manager.setLocked(true).await() } }
+        launch { state.election.candidates.forEach { guild.removeRoleFromMember(UserSnowflake.fromId(it), candidateRole).await() } }
+
+        if (state.election.primeMinister != 0L) {
+            guild.modifyMemberRoles(guild.retrieveMemberById(state.election.primeMinister).await(), setOf(pastLeaderRole), setOf(currentLeaderRole)).queue()
+        }
 
         // tally candidate votes
         if (state.election.candidates.isEmpty()) {
@@ -550,6 +587,8 @@ object Bot {
         val topDecrees = tallyDecreeVotes()
 
         // send welcomes
+        guild.addRoleToMember(UserSnowflake.fromId(state.election.primeMinister), currentLeaderRole).queue()
+
         channel.sendMessage(buildString {
             append("Congratulations, <@").append(state.election.primeMinister).append(">! ")
             append("Through the due and just democratic process, a body of your peers have fairly elected you as Prime Minster of ")
