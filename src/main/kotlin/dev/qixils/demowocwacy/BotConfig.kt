@@ -48,5 +48,5 @@ data class DecreeConfig(
     val socialCredit: SocialCreditConfig = SocialCreditConfig(),
     val chaChaSlide: ChaChaSlideConfig = ChaChaSlideConfig(),
     val communism: CommunismConfig = CommunismConfig(),
-    val egalitarianism: EgalitarianismConfig = EgalitarianismConfig(),
+    val falseDemocracy: FalseDemocracyConfig = FalseDemocracyConfig(),
 )

@@ -219,6 +219,8 @@ object Bot {
             ChaChaSlideDecree(),
             CommunismDecree(),
             CaryDecree(),
+            FalseDemocracyDecree(),
+            EgalitarianismDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
