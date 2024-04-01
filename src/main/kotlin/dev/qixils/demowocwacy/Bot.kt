@@ -192,6 +192,7 @@ object Bot {
             EmbraceDiseaseDecree(),
             NoFifthGlyphDecree(),
             GentlepeopleDecree(),
+            R9KDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
