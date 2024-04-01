@@ -33,7 +33,7 @@ class InvertDecree : Decree(
         return red shl 16 or (green shl 8) or blue
     }
 
-    private suspend fun invert(imageProxy: ImageProxy): Icon {
+    suspend fun invert(imageProxy: ImageProxy): Icon {
         val inputStream = imageProxy.download(4096).await()
         // Read the image from the InputStream
         val image = withContext(Dispatchers.IO) {
