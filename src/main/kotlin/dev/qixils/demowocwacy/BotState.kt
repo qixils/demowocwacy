@@ -21,6 +21,7 @@ data class DecreeState(
     val communism: CommunismState = CommunismState(),
     val egalitarianism: EgalitarianismState = EgalitarianismState(),
     val facebook: FacebookState = FacebookState(),
+    val peanut: PeanutState = PeanutState(),
 )
 
 enum class Task {
