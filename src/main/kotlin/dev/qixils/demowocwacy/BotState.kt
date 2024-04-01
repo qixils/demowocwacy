@@ -10,7 +10,7 @@ data class BotState(
     var ignoredDecrees: MutableList<String> = mutableListOf(),
     var election: ElectionState = ElectionState(),
     var decrees: DecreeState = DecreeState(),
-    var nextTask: NextTask = NextTask.OPEN_REGISTRATION,
+    var nextTask: Task = Task.OPEN_REGISTRATION,
 )
 
 @Serializable
@@ -19,7 +19,11 @@ data class DecreeState(
     val clone: CloneState = CloneState(),
 )
 
-enum class NextTask {
+enum class Task {
     OPEN_REGISTRATION,
-    // todo
+    OPEN_BALLOT,
+    CLOSE_BALLOT,
+    CLOSE_TIEBREAK,
+    WELCOME_PM,
+    PM_TIMEOUT,
 }

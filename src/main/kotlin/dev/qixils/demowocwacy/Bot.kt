@@ -37,9 +37,9 @@ import net.dv8tion.jda.api.utils.messages.MessageRequest
 import net.dv8tion.jda.internal.utils.PermissionUtil
 import org.slf4j.Logger
 import java.io.File
-import java.time.Month
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
+import java.time.*
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 @OptIn(ExperimentalSerializationApi::class)
 object Bot {
@@ -253,6 +253,7 @@ object Bot {
                 }).queue()
                 return@coroutineScope
             }
+            state.nextTask = Task.OPEN_REGISTRATION // gets saved in startDecree
             launch { event.reply("Thank you. **${decree.displayName}** shall be enacted shortly.").await() }
             launch { channel.sendMessage(buildString {
                 append("Your Prime Minister has returned with their decree. Effective immediately, **")
@@ -263,7 +264,7 @@ object Bot {
                 append(guild.name)
                 append(".")
             }).await() }
-            launch { event.message.edit(components = event.message.components.map { it.asDisabled() }).await() }
+            launch { event.message.editMessageComponents(event.message.components.map { it.asDisabled() }).await() }
             launch { startDecree(decree) }
         }}
     }
@@ -308,6 +309,23 @@ object Bot {
         return PermissionUtil.checkPermission(channel, member, Permission.MESSAGE_SEND_IN_THREADS)
     }
 
+    fun tallyDecreeVotes(): List<Decree> {
+        val decrees = mutableMapOf<String, Int>()
+        for (decree in state.election.decrees)
+            decrees[decree] = 0
+        for ((voter, decree) in state.election.decreeVotes.entries) {
+            if (decree !in decrees) {
+                logger.warn("User $voter voted for unknown decree $decree")
+                continue
+            }
+            decrees[decree] = decrees[decree]!! + 1
+        }
+        return decrees.toList()
+            .sortedWith(voteSorter)
+            .take(2) // tie-break doesn't really matter
+            .map { (name, _) -> allDecrees.find { decree -> decree.name == name }!! }
+    }
+
     @JvmStatic
     fun main(args: Array<String>) {
         runBlocking {
@@ -317,6 +335,7 @@ object Bot {
             // loop
             while (true) {
                 // abort after April 1st
+                // TODO: replace with check for remaining decrees; send goodbye message; schedule cleanup for 2hrs later
                 val zdt = ZonedDateTime.now(ZoneOffset.UTC)
                 if (zdt.month == Month.APRIL && zdt.dayOfMonth > 1)
                     break
@@ -326,17 +345,49 @@ object Bot {
         }
     }
 
-    private suspend fun handleElection() {
-        // TODO: state management (resume from prior session)
-        handleElectionRegistrationPhase()
-        handleElectionVotingPhase()
+    private suspend fun delayUntil(duration: Long) {
+        val now = System.currentTimeMillis()
+        val delayTo = now + duration - (now % duration)
+        logger.info("Sleeping until ${Instant.ofEpochMilli(delayTo)} (Task: ${state.nextTask})")
+        delay(delayTo - now)
     }
 
-    private suspend fun handleElectionRegistrationPhase() {
+    private suspend fun delayUntil(duration: Duration) {
+        delayUntil(duration.toMillis())
+    }
+
+    private suspend fun delayUntil(duration: kotlin.time.Duration) {
+        delayUntil(duration.inWholeMilliseconds)
+    }
+
+    private suspend fun closeMessage(id: Long, name: String) {
+        if (id == 0L) {
+            logger.warn("Could not find $name message to disable components")
+        } else {
+            try {
+                val message = channel.retrieveMessageById(id).await()
+                message.editMessageComponents(message.components.map { it.asDisabled() }).await()
+            } catch (e: Exception) {
+                logger.warn("Failed to disable components for $name message", e)
+            }
+        }
+    }
+
+    private suspend fun handleElection() {
+        when (state.nextTask) {
+            Task.OPEN_REGISTRATION -> handleOpenRegistrationTask()
+            Task.OPEN_BALLOT -> handleOpenBallotTask()
+            Task.CLOSE_BALLOT -> handleCloseBallotTask()
+            Task.CLOSE_TIEBREAK -> handleCloseTieBreakTask()
+            Task.WELCOME_PM -> handleWelcomePMTask()
+            Task.PM_TIMEOUT -> handlePMTimeoutTask()
+        }
+    }
+
+    private suspend fun handleOpenRegistrationTask() {
         // wait for start of election cycle (top of the hour)
-        var now = System.currentTimeMillis()
-        val nextHour = now + 3600000 - now % 3600000
-        delay(nextHour - now)
+        delayUntil(1.hours)
+
         // put signup form in elections channel
         val messageData = MessageCreate {
             content = "The time has come to elect a new leader to bring our nation to glorious greatness! " +
@@ -348,18 +399,24 @@ object Bot {
             // TODO: is a thread created?
             components += row(signupButton)
         }
-        val message = channel.sendMessage(messageData).await()
-        // sleep until XX:30
-        now = System.currentTimeMillis()
-        val nextHalfHour = now + 1800000 - now % 1800000
-        delay(nextHalfHour - now)
-        // close signup form
-        message.editMessageComponents(message.components.map { it.asDisabled() }).queue()
+
+        state.election.signupFormMessage = channel.sendMessage(messageData).await().idLong
+        state.nextTask = Task.OPEN_BALLOT
+        saveState()
     }
 
-    private suspend fun handleElectionVotingPhase() = coroutineScope {
-        val electionOptions = state.election.candidates.map { cand: Long -> SelectOption.of(guild.retrieveMemberById(cand).await().effectiveName, cand.toString()) }
+    private suspend fun handleOpenBallotTask() = coroutineScope {
+        // sleep until XX:30
+        delayUntil(30.minutes)
+
+        // close signup form
+        closeMessage(state.election.signupFormMessage, "signup form")
+        state.election.signupFormMessage = 0L
+
         // announce ballot
+        val electionOptions = state.election.candidates
+            .mapNotNull { cand -> try { guild.retrieveMemberById(cand).await() } catch (e: Exception) { null } }
+            .map { cand -> SelectOption.of(cand.effectiveName, cand.id) }
         val messageData = MessageCreate {
             content = buildString {
                 append("The election has begun! Attached to this message, you will find the two sections of the ballot.\n")
@@ -394,140 +451,170 @@ object Bot {
                 })
             )
         }
-        val message = channel.sendMessage(messageData).await()
+
+        state.election.ballotFormMessage = channel.sendMessage(messageData).await().idLong
+        state.nextTask = Task.CLOSE_BALLOT
+        saveState()
+    }
+
+    private suspend fun handleCloseBallotTask() = coroutineScope {
         // sleep until XX:40
-        var now = System.currentTimeMillis()
-        var delayUntil = now + 600000 - now % 600000
-        delay(delayUntil - now)
-        // close ballot and threads
-        message.editMessageComponents(message.components.map { it.asDisabled() }).queue()
-        channel.threadChannels.forEach { it.manager.setLocked(true).queue() }
-        // tally decree votes
-        val decrees = mutableMapOf<String, Int>()
-        for (decree in state.election.decrees)
-            decrees[decree] = 0
-        for ((voter, decree) in state.election.decreeVotes.entries) {
-            if (decree !in decrees) {
-                logger.warn("User $voter voted for unknown decree $decree")
-                continue
-            }
-            decrees[decree] = decrees[decree]!! + 1
-        }
-        val topDecrees = decrees.toList()
-            .sortedWith(voteSorter)
-            .take(2) // tie-break doesn't really matter
-            .map { (name, _) -> allDecrees.find { decree -> decree.name == name }!! }
-        // tally election votes
+        delayUntil(10.minutes)
+
+        // close ballot
+        closeMessage(state.election.ballotFormMessage, "signup form")
+        state.election.ballotFormMessage = 0L
+
+        // close threads
+        launch { channel.threadChannels.forEach { it.manager.setLocked(true).await() } }
+
+        // tally candidate votes
         if (state.election.candidates.isEmpty()) {
             // TODO: PRIME_MINISTER_9000
-        } else {
-            val votes = mutableMapOf<Long, Int>()
-            for (candidate in state.election.candidates)
-                votes[candidate] = 0
-            for ((voter, vote) in state.election.candidateVotes.entries) {
-                for (candidate in vote) {
-                    if (candidate !in votes) {
-                        logger.warn("User $voter voted for unknown candidate $candidate")
-                        continue
-                    }
-                    votes[candidate] = votes[candidate]!! + 1
-                }
-            }
-            val sortedVotes = votes.toList().sortedWith(voteSorter)
-            val winners = sortedVotes.takeWhile { it.second == sortedVotes.first().second }.map { it.first }
-            val winner: Long
-            if (winners.size > 1) {
-                // resort to 5min FPTP tiebreaker
-                state.election.tieBreakCandidates.addAll(winners)
-                channel.sendMessage(MessageCreate {
-                    content = buildString {
-                        append("Ah, an indecisive bunch, are we? ")
-                        append("Alright, I'll give you all five minutes to try to sort this tie before I step in and pick randomly. ")
-                        append("Please select your favorite of the candidates below.")
-                    }
-                    components += row(StringSelectMenu("vote:tiebreak") {
-                        for (candidate in winners) {
-                            option(guild.retrieveMemberById(candidate).await().effectiveName, candidate.toString())
-                        }
-                    })
-                }).await()
-                now = System.currentTimeMillis()
-                delayUntil = now + 300000 - now % 300000
-                delay(delayUntil - now)
-                votes.clear()
-                for ((voter, candidate) in state.election.tieBreakVotes) {
-                    if (candidate !in winners) {
-                        logger.warn("User $voter voted for unknown candidate $candidate")
-                        continue
-                    }
-                    votes[candidate] = votes[candidate]!! + 1
-                }
-                val newSortedVotes = votes.toList().sortedWith(voteSorter)
-                winner = newSortedVotes.takeWhile { it.second == newSortedVotes.first().second }.map { it.first }.random()
-            } else {
-                winner = winners.first()
-            }
-            // announce winner
-            state.election.primeMinister = winner
-            saveState()
-            channel.sendMessage(buildString {
-                append("Congratulations, <@").append(winner).append(">! ")
-                append("Through the due and just democratic process, a body of your peers have fairly elected you as Prime Minster of ")
-                append(guild.name).append(". ")
-                append("The people now call upon you to pass just one law to bring back peace and stability to our great nation. ")
-                append("Your constituents have helped you narrow it down to just two choices, ")
-                append(topDecrees[0].displayName)
-                append(" or ")
-                append(topDecrees[1].displayName)
-                append(". Please, choose wisely.")
-            }).await()
-            // DM decree form to winner (actually maybe don't DM because users can disable them; use a private channel instead?)
-            state.election.decreeFormMessage = pmChannel.sendMessage(MessageCreate {
-                content = buildString {
-                    append("Welcome to your own personal oval office, <@").append(winner).append(">. ")
-                    append("Quickly now, there's no time to waste. ")
-                    append("We need you to pass a new law to help save our country. ")
-                    append("Your constituents have helped narrow it down to two. ")
-                    append("All you need to do now is click below to select which law to enact. ")
-                    append("If you fail to do so in the next 10 minutes, I'll make your choice for you.\n\n")
-                    append("To help you make your choice, I have some extra information on each decree:\n")
-                    append("> **").append(topDecrees[0].displayName).append(":** ").append(topDecrees[0].description).append('\n')
-                    append("> **").append(topDecrees[1].displayName).append(":** ").append(topDecrees[1].description).append('\n')
-                }
-                components += row(
-                    button("pick-decree:${topDecrees[0].name}", topDecrees[0].name, topDecrees[0].emoji, ButtonStyle.PRIMARY),
-                    button("pick-decree:${topDecrees[1].name}", topDecrees[1].name, topDecrees[1].emoji, ButtonStyle.PRIMARY),
-                )
-                mentions { user(winner) }
-            }).await().idLong
-            saveState()
-
-            // wait 10 minutes then make random choice
-            now = System.currentTimeMillis()
-            delayUntil = now + 600000 - now % 600000
-            delay(delayUntil - now)
-
-            if (state.election.decrees.isEmpty()) return@coroutineScope
-            if (state.election.decreeFormMessage == 0L) return@coroutineScope
-
-            launch {
-                val decreeFormMessage = pmChannel.retrieveMessageById(state.election.decreeFormMessage).await()
-                decreeFormMessage.edit(components = decreeFormMessage.components.map { it.asDisabled() }).await()
-            }
-            val decree = topDecrees.random()
-            launch { channel.sendMessage(buildString {
-                append("I see you are indecisive. Very well. As your loyal vice prime minister, I shall enact a law for you. Good day.")
-            }).await() }
-            launch { channel.sendMessage(buildString {
-                append("Your Prime Minister has failed to pass a law, and so as their loyal vice prime minister I have chosen to enact **")
-                append(decree.displayName)
-                append("**: ")
-                append(decree.description)
-                append("\nGlory to ")
-                append(guild.name)
-                append(".")
-            }).await() }
-            launch { startDecree(decree) }
+            return@coroutineScope
         }
+
+        val votes = mutableMapOf<Long, Int>()
+        for (candidate in state.election.candidates)
+            votes[candidate] = 0
+        for ((voter, vote) in state.election.candidateVotes.entries) {
+            for (candidate in vote) {
+                if (candidate !in votes) {
+                    logger.warn("User $voter voted for unknown candidate $candidate")
+                    continue
+                }
+                votes[candidate] = votes[candidate]!! + 1
+            }
+        }
+        val sortedVotes = votes.toList().sortedWith(voteSorter)
+        val winners = sortedVotes.takeWhile { it.second == sortedVotes.first().second }.map { it.first }
+        if (winners.size == 1) {
+            state.election.primeMinister = winners[0]
+            state.nextTask = Task.WELCOME_PM
+            saveState()
+            return@coroutineScope
+        }
+
+        // resort to 5min FPTP tiebreaker
+        state.election.tieBreakCandidates.addAll(winners)
+        state.election.tieBreakFormMessage = channel.sendMessage(MessageCreate {
+            content = buildString {
+                append("Ah, an indecisive bunch, are we? ")
+                append("Alright, I'll give you all five minutes to try to sort this tie before I step in and pick randomly. ")
+                append("Please select your favorite of the candidates below.")
+            }
+            components += row(StringSelectMenu("vote:tiebreak") {
+                for (candidate in winners) {
+                    option(guild.retrieveMemberById(candidate).await().effectiveName, candidate.toString())
+                }
+            })
+        }).await().idLong
+
+        state.nextTask = Task.CLOSE_TIEBREAK
+        saveState()
+    }
+
+    private suspend fun handleCloseTieBreakTask() = coroutineScope {
+        // sleep until XX:45
+        delayUntil(5.minutes)
+
+        // close ballot
+        closeMessage(state.election.tieBreakFormMessage, "tie-break form")
+        state.election.tieBreakFormMessage = 0L
+
+        // fetch votes
+        val votes = mutableMapOf<Long, Int>()
+        for ((voter, candidate) in state.election.tieBreakVotes) {
+            if (candidate !in state.election.tieBreakCandidates) {
+                logger.warn("User $voter voted for unknown candidate $candidate")
+                continue
+            }
+            votes[candidate] = votes[candidate]!! + 1
+        }
+        val newSortedVotes = votes.toList().sortedWith(voteSorter)
+
+        // save data
+        state.election.tieBreakCandidates.clear()
+        state.election.primeMinister = newSortedVotes.takeWhile { it.second == newSortedVotes.first().second }.map { it.first }.random()
+        state.nextTask = Task.WELCOME_PM
+        saveState()
+    }
+
+    private suspend fun handleWelcomePMTask() = coroutineScope {
+        val topDecrees = tallyDecreeVotes()
+
+        // send welcomes
+        channel.sendMessage(buildString {
+            append("Congratulations, <@").append(state.election.primeMinister).append(">! ")
+            append("Through the due and just democratic process, a body of your peers have fairly elected you as Prime Minster of ")
+            append(guild.name).append(". ")
+            append("The people now call upon you to pass just one law to bring back peace and stability to our great nation. ")
+            append("Your constituents have helped you narrow it down to just two choices, ")
+            append(topDecrees[0].displayName)
+            append(" or ")
+            append(topDecrees[1].displayName)
+            append(". Please, choose wisely.")
+        }).await()
+
+        // "DM" decree form to winner
+        state.election.decreeFormMessage = pmChannel.sendMessage(MessageCreate {
+            content = buildString {
+                append("Welcome to your own personal oval office, <@").append(state.election.primeMinister).append(">. ")
+                append("Quickly now, there's no time to waste. ")
+                append("We need you to pass a new law to help save our country. ")
+                append("Your constituents have helped narrow it down to two. ")
+                append("All you need to do now is click below to select which law to enact. ")
+                append("If you fail to do so in the next 10 minutes, I'll make your choice for you.\n\n")
+                append("To help you make your choice, I have some extra information on each decree:\n")
+                append("> **").append(topDecrees[0].displayName).append(":** ").append(topDecrees[0].description).append('\n')
+                append("> **").append(topDecrees[1].displayName).append(":** ").append(topDecrees[1].description).append('\n')
+            }
+            components += row(
+                button("pick-decree:${topDecrees[0].name}", topDecrees[0].name, topDecrees[0].emoji, ButtonStyle.PRIMARY),
+                button("pick-decree:${topDecrees[1].name}", topDecrees[1].name, topDecrees[1].emoji, ButtonStyle.PRIMARY),
+            )
+            mentions { user(state.election.primeMinister) }
+        }).await().idLong
+
+        state.nextTask = Task.PM_TIMEOUT
+        saveState()
+    }
+
+    private suspend fun handlePMTimeoutTask() = coroutineScope {
+        // wait until XX:00
+        delayUntil(15.minutes)
+
+        // check this is still the right task
+        // TODO: so if I want to do this every 2 hours still
+        //  then I think this is kinda accidentally a good way to do it?
+        //  since I think this waits until like :00
+        //  and then the next task again waits for :00
+        //  yeah??? idk
+        if (state.nextTask != Task.PM_TIMEOUT) return@coroutineScope
+
+        if (state.election.decrees.isEmpty()) return@coroutineScope
+        if (state.election.decreeFormMessage == 0L) return@coroutineScope
+
+        closeMessage(state.election.decreeFormMessage, "decree form")
+        state.election.decreeFormMessage = 0L
+
+        val topDecrees = tallyDecreeVotes()
+        val decree = topDecrees.random()
+        launch { channel.sendMessage(buildString {
+            append("I see you are indecisive. Very well. As your loyal vice prime minister, I shall enact a law for you. Good day.")
+        }).await() }
+        launch { channel.sendMessage(buildString {
+            append("Your Prime Minister has failed to pass a law, and so as their loyal vice prime minister I have chosen to enact **")
+            append(decree.displayName)
+            append("**: ")
+            append(decree.description)
+            append("\nGlory to ")
+            append(guild.name)
+            append(".")
+        }).await() }
+        launch { startDecree(decree) }
+
+        state.nextTask = Task.OPEN_REGISTRATION
+        saveState()
     }
 }

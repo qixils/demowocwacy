@@ -11,5 +11,8 @@ data class ElectionState(
     val decreeVotes: MutableMap<Long, String> = mutableMapOf(), // map of voter IDs to chosen decree name
     val decrees: MutableList<String> = mutableListOf(), // the names of decrees being voted on in this election // TODO: why is nothing adding to this
     var primeMinister: Long = 0,
+    var signupFormMessage: Long = 0,
+    var ballotFormMessage: Long = 0,
+    var tieBreakFormMessage: Long = 0,
     var decreeFormMessage: Long = 0,
 )
