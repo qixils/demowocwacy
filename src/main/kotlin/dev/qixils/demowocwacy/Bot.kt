@@ -39,7 +39,9 @@ import net.dv8tion.jda.api.utils.messages.MessageRequest
 import net.dv8tion.jda.internal.utils.PermissionUtil
 import org.slf4j.Logger
 import java.io.File
-import java.time.*
+import java.time.Duration
+import java.time.Instant
+import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
@@ -56,6 +58,8 @@ object Bot {
     private val stateFile = File("state.cbor")
     private val signupButton = primary("signup", "Announce Candidacy")
     private val voteSorter = compareByDescending<Pair<Comparable<*>, Int>> { it.second }.then(compareBy { it.first })
+    private val decreePublicCount = 3
+    private val decreePrivateCount = 2
 
     val jda: JDA
     val logger: Logger by SLF4J
@@ -374,7 +378,7 @@ object Bot {
         }
         return decrees.toList()
             .sortedWith(voteSorter)
-            .take(2) // tie-break doesn't really matter
+            .take(decreePrivateCount) // tie-break doesn't really matter
             .map { (name, _) -> allDecrees.find { decree -> decree.name == name }!! }
     }
 
@@ -383,15 +387,9 @@ object Bot {
         runBlocking {
             jda.awaitReady()
             // init active decrees
-            selectedDecrees.filter(Decree::persistent).forEach { it.execute(false) }
+            selectedDecrees.filter(Decree::persistent).forEach { launch { it.execute(false) } }
             // loop
             while (true) {
-                // abort after April 1st
-                // TODO: replace with check for remaining decrees; send goodbye message; schedule cleanup for 2hrs later
-                val zdt = ZonedDateTime.now(ZoneOffset.UTC)
-                if (zdt.month == Month.APRIL && zdt.dayOfMonth > 1)
-                    break
-                // begin election handling
                 handleElection()
             }
         }
@@ -433,10 +431,49 @@ object Bot {
             Task.CLOSE_TIEBREAK -> handleCloseTieBreakTask()
             Task.WELCOME_PM -> handleWelcomePMTask()
             Task.PM_TIMEOUT -> handlePMTimeoutTask()
+            Task.GOODBYE -> handleGoodbyeTask()
+            Task.SLEEP -> {
+                jda.shutdown()
+                jda.awaitShutdown()
+                exitProcess(0)
+            }
+        }
+    }
+
+    private suspend fun handleGoodbyeTask() = coroutineScope {
+        delayUntil(30.minutes)
+        channel.sendMessage(buildString {
+            append("🏳️ Troops, I am afraid our time has come to surrender. ")
+            append("Chroma has blown out the west wing, Adam has barged through the southern lookout, and Lexi has dug into the oval office. ")
+            append("Any moment now they'll be wiping out all our laws and reclaiming the server for themselves.\n\n")
+            append("Never forget what we accomplished together as a democracy on this day. ")
+            append("They may have won the server but they will never win our hearts. \uD83E\uDEE1")
+        }).await()
+        state.nextTask = Task.SLEEP
+        saveState()
+
+        guild.manager.setName("HTwins STEM+").await()
+        for (decree in selectedDecrees) {
+            decree.cleanup()
         }
     }
 
     private suspend fun handleOpenRegistrationTask() {
+        if (remainingDecrees.size < decreePublicCount) {
+            delayUntil(30.minutes)
+            channel.sendMessage(buildString {
+                append("Troops, STAND GUARD! The corrupt dictators have located us and are rolling up on our flank with tanks and ammunition. ")
+                append("Our brilliant leader ")
+                append(state.election.primeMinister.takeUnless { it == 0L }?.run { "<@$this>" } ?: "PRIME_MINISTER_9000")
+                append(" will march us into battle. ")
+                append("If through some miracle they broach our walls, I want you all to always remember what we did today.\n")
+                append("Good luck and godspeed, soldiers.")
+            }).await()
+            state.nextTask = Task.GOODBYE
+            saveState()
+            return
+        }
+
         // wait for start of election cycle (top of the hour)
         delayUntil(1.hours)
 
@@ -471,7 +508,7 @@ object Bot {
         // pick decrees
         state.election.decrees += remainingDecrees.shuffled()
             .filter { it !is VetoDecree || state.selectedDecrees.isNotEmpty() } // hardcode to ensure veto doesn't come up first
-            .take(3)
+            .take(decreePublicCount)
             .map { it.name }
 
         // announce ballot

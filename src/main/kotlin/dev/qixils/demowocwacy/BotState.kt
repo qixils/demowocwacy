@@ -28,4 +28,6 @@ enum class Task {
     CLOSE_TIEBREAK,
     WELCOME_PM,
     PM_TIMEOUT,
+    GOODBYE,
+    SLEEP,
 }
