@@ -223,6 +223,7 @@ object Bot {
             EgalitarianismDecree(),
             EmojiDecree(),
             FacebookDecree(),
+            ASMRDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
