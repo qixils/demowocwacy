@@ -254,13 +254,22 @@ object Bot {
                 return@coroutineScope
             }
             launch { event.reply("Thank you. **${decree.displayName}** shall be enacted shortly.").await() }
+            launch { channel.sendMessage(buildString {
+                append("Your Prime Minister has returned with their decree. Effective immediately, **")
+                append(decree.displayName)
+                append("**: ")
+                append(decree.description)
+                append("\nGlory to ")
+                append(guild.name)
+                append(".")
+            }).await() }
             launch { event.message.edit(components = event.message.components.map { it.asDisabled() }).await() }
             launch { startDecree(decree) }
-            // todo public msg
         }}
     }
 
     private suspend fun startDecree(decree: Decree) = coroutineScope {
+        state.election.decreeFormMessage = 0L
         state.selectedDecrees.add(decree.name)
         state.ignoredDecrees.addAll(pendingDecrees.map { it.name }.filter { it != decree.name })
         state.election.decrees.clear()
@@ -348,7 +357,7 @@ object Bot {
         message.editMessageComponents(message.components.map { it.asDisabled() }).queue()
     }
 
-    private suspend fun handleElectionVotingPhase() {
+    private suspend fun handleElectionVotingPhase() = coroutineScope {
         val electionOptions = state.election.candidates.map { cand: Long -> SelectOption.of(guild.retrieveMemberById(cand).await().effectiveName, cand.toString()) }
         // announce ballot
         val messageData = MessageCreate {
@@ -387,9 +396,9 @@ object Bot {
         }
         val message = channel.sendMessage(messageData).await()
         // sleep until XX:40
-        val now = System.currentTimeMillis()
-        val nextTenMins = now + 600000 - now % 600000
-        delay(nextTenMins - now)
+        var now = System.currentTimeMillis()
+        var delayUntil = now + 600000 - now % 600000
+        delay(delayUntil - now)
         // close ballot and threads
         message.editMessageComponents(message.components.map { it.asDisabled() }).queue()
         channel.threadChannels.forEach { it.manager.setLocked(true).queue() }
@@ -442,7 +451,9 @@ object Bot {
                         }
                     })
                 }).await()
-                delay(300000)
+                now = System.currentTimeMillis()
+                delayUntil = now + 300000 - now % 300000
+                delay(delayUntil - now)
                 votes.clear()
                 for ((voter, candidate) in state.election.tieBreakVotes) {
                     if (candidate !in winners) {
@@ -469,9 +480,9 @@ object Bot {
                 append(" or ")
                 append(topDecrees[1].displayName)
                 append(". Please, choose wisely.")
-            })
+            }).await()
             // DM decree form to winner (actually maybe don't DM because users can disable them; use a private channel instead?)
-            pmChannel.sendMessage(MessageCreate {
+            state.election.decreeFormMessage = pmChannel.sendMessage(MessageCreate {
                 content = buildString {
                     append("Welcome to your own personal oval office, <@").append(winner).append(">. ")
                     append("Quickly now, there's no time to waste. ")
@@ -488,15 +499,35 @@ object Bot {
                     button("pick-decree:${topDecrees[1].name}", topDecrees[1].name, topDecrees[1].emoji, ButtonStyle.PRIMARY),
                 )
                 mentions { user(winner) }
-            })
-            // wait 10 minutes then make choice
-            // TODO: wait
-            if (state.election.decrees.isEmpty()) return
-            // TODO: disable components
+            }).await().idLong
+            saveState()
+
+            // wait 10 minutes then make random choice
+            now = System.currentTimeMillis()
+            delayUntil = now + 600000 - now % 600000
+            delay(delayUntil - now)
+
+            if (state.election.decrees.isEmpty()) return@coroutineScope
+            if (state.election.decreeFormMessage == 0L) return@coroutineScope
+
+            launch {
+                val decreeFormMessage = pmChannel.retrieveMessageById(state.election.decreeFormMessage).await()
+                decreeFormMessage.edit(components = decreeFormMessage.components.map { it.asDisabled() }).await()
+            }
             val decree = topDecrees.random()
-            // todo pm msg
-            // todo public msg
-            startDecree(decree)
+            launch { channel.sendMessage(buildString {
+                append("I see you are indecisive. Very well. As your loyal vice prime minister, I shall enact a law for you. Good day.")
+            }).await() }
+            launch { channel.sendMessage(buildString {
+                append("Your Prime Minister has failed to pass a law, and so as their loyal vice prime minister I have chosen to enact **")
+                append(decree.displayName)
+                append("**: ")
+                append(decree.description)
+                append("\nGlory to ")
+                append(guild.name)
+                append(".")
+            }).await() }
+            launch { startDecree(decree) }
         }
     }
 }
