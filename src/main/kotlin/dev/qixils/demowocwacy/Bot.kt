@@ -191,6 +191,7 @@ object Bot {
             CloneDecree(),
             EmbraceDiseaseDecree(),
             NoFifthGlyphDecree(),
+            GentlepeopleDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
