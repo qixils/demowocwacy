@@ -214,6 +214,7 @@ object Bot {
             DoNotPassThisDecree(),
             VetoDecree(),
             SocialCreditDecree(),
+            ChaChaSlideDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->

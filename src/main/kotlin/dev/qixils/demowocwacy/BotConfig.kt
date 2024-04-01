@@ -46,4 +46,5 @@ data class DecreeConfig(
     val stem: STEMConfig = STEMConfig(),
     val disease: EmbraceDiseaseConfig = EmbraceDiseaseConfig(),
     val socialCredit: SocialCreditConfig = SocialCreditConfig(),
+    val chaChaSlide: ChaChaSlideConfig = ChaChaSlideConfig(),
 )

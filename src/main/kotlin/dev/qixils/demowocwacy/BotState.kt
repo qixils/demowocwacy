@@ -1,5 +1,6 @@
 package dev.qixils.demowocwacy
 
+import dev.qixils.demowocwacy.decrees.ChaChaSlideState
 import dev.qixils.demowocwacy.decrees.CloneState
 import dev.qixils.demowocwacy.decrees.UnseriousState
 import dev.qixils.demowocwacy.decrees.VetoState
@@ -19,6 +20,7 @@ data class DecreeState(
     val unserious: UnseriousState = UnseriousState(),
     val clone: CloneState = CloneState(),
     val veto: VetoState = VetoState(),
+    val chaChaSlide: ChaChaSlideState = ChaChaSlideState(),
 )
 
 enum class Task {
