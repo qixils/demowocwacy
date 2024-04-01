@@ -221,6 +221,7 @@ object Bot {
             CaryDecree(),
             FalseDemocracyDecree(),
             EgalitarianismDecree(),
+            EmojiDecree(),
         )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
