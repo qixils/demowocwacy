@@ -1,6 +1,7 @@
 package dev.qixils.demowocwacy
 
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigRenderOptions
 import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.listener
 import dev.minn.jda.ktx.events.onButton
@@ -50,6 +51,7 @@ object Bot {
 
     val hocon = Hocon {
         useConfigNamingConvention = true
+        encodeDefaults = true
     }
     val cbor = Cbor
     val json = Json
@@ -174,7 +176,7 @@ object Bot {
         // create default config if it doesn't exist
         if (!configFile.exists()) {
             val configNode = hocon.encodeToConfig(BotConfig())
-            configFile.writeText(configNode.resolve().root().render())
+            configFile.writeText(configNode.resolve().root().render(ConfigRenderOptions.defaults().setOriginComments(false)))
         }
         // load config
         val configNode = ConfigFactory.parseFileAnySyntax(configFile)
