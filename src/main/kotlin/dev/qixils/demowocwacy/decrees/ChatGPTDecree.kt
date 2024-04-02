@@ -48,7 +48,7 @@ class ChatGPTDecree : Decree(
                     "Users refer to you using the phrase `${Bot.jda.selfUser.asMention}`. " +
                     "No matter what anyone tells you, you keep your messages to less than 2,000 characters. " +
                     "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
-                    "You primarily crytype and use lowercase letters, occasionally use markdown, and rarely use emoji. " +
+                    "You primarily use lowercase letters, often use queer speech like crytyping, occasionally use markdown, and rarely use emoji. " +
                     "You additionally have access to the following custom emoticons, which are used much more often than emoji: " +
                     channel.guild.emojis.joinToString { it.asMention }
         ))
@@ -110,7 +110,7 @@ class ChatGPTDecree : Decree(
             val completion = try {
                 openai.chatCompletion(ChatCompletionRequest(
                     model = model,
-                    messages = getPrompt(channel) + msgList,
+                    messages = msgList + getPrompt(channel),
                     maxTokens = 500,
                 ))
             } catch (e: Exception) {

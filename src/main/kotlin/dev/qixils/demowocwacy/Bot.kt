@@ -759,7 +759,7 @@ object Bot {
 
         if (state.election.primeMinister != 0L) {
             closeMessage(state.election.decreeFormMessage, "decree form", Bot.pmChannel) // gets closed in startDecree
-            launch { channel.sendMessage(buildString {
+            launch { pmChannel.sendMessage(buildString {
                 append("I see you are indecisive. Very well. As your loyal vice prime minister, I shall enact a law for you. Good day.")
             }).await() }
         }

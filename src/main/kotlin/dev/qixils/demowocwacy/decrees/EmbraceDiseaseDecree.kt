@@ -16,7 +16,6 @@ class EmbraceDiseaseDecree : Decree(
 ) {
     override val priority: Int
         get() = 10
-    private val pattern = Regex("<@!?(\\d{17,19})>")
     private fun getRole() = Bot.guild.getRoleById(Bot.config.decrees.disease.role)!!
 
     override suspend fun execute(init: Boolean) {
@@ -27,13 +26,16 @@ class EmbraceDiseaseDecree : Decree(
             Bot.guild.addRoleToMember(UserSnowflake.fromId(target), getRole()).await()
         }
         Bot.jda.listener<MessageReceivedEvent> { event ->
-            if (!isApplicableTo(event.message)) return@listener
+            //if (!isApplicableTo(event.message)) return@listener
             val role = getRole()
             if (role !in event.member!!.roles) return@listener
 
-            val matches = pattern.findAll(event.message.contentRaw)
-            for (match in matches) {
-                val user = UserSnowflake.fromId(match.groupValues[1])
+            val mentions = event.message.mentions.users.toMutableList()
+
+            try { event.message.messageReference?.resolve()?.await()?.author?.let { mentions.add(it) } }
+            catch (e: Exception) { Bot.logger.warn("Failed to resolve referenced message", e) }
+
+            for (user in mentions) {
                 if (Bot.guild.getMember(user)?.let { role in it.roles } == true) continue
                 try {
                     Bot.guild.addRoleToMember(user, role).await()
