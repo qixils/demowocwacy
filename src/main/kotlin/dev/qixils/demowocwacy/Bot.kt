@@ -189,11 +189,8 @@ object Bot {
         MessageRequest.setDefaultMentions(emptySet())
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
+            logger.info("ye")
             // signing up for office
-//            if (!isRegisteredVoter(event.user)) {
-//                event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
-//                return@onButton
-//            }
             if (event.user.idLong in state.election.candidates) {
                 event.reply_("You are already a candidate!", ephemeral = true).queue()
                 return@onButton
@@ -206,16 +203,12 @@ object Bot {
                     required = true,
                     placeholder = "As prime minister of ${event.guild!!.name}, I would enact the decree ___. I would also..."
                 )
-            }
+            }.queue()
         }
         jda.listener<ModalInteractionEvent> { event ->
+            logger.info(event.modalId)
             if (event.modalId == "form:signup") {
-                logger.info(event.modalId)
                 // double check that the user still isn't a candidate (and is a registered voter)
-//                if (!isRegisteredVoter(event.user)) {
-//                    event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
-//                    return@listener
-//                }
                 if (event.user.idLong in state.election.candidates) {
                     event.reply_("You are already a candidate!", ephemeral = true).queue()
                     return@listener
@@ -234,6 +227,7 @@ object Bot {
                     mentions = Mentions.of(MentionConfig.users(listOf(event.member!!.idLong)))
                 ).await()
                 message.createThreadChannel("Candidate: ${event.member!!.effectiveName}").queue()
+                event.reply_("Thank you for your candidacy.", ephemeral = true).queue()
             }
         }
         // init ballots
@@ -285,11 +279,11 @@ object Bot {
             }
             launch { event.reply("Thank you. **${decree.displayName}** shall be enacted shortly.").await() }
             launch { channel.sendMessage(buildString {
-                append("Your Prime Minister has returned with their decree. Effective immediately, **")
+                append("Your Prime Minister has returned with their decree. Effective immediately, __**")
                 append(decree.displayName)
                 append("**: ")
                 append(decree.description)
-                append("\nGlory to ")
+                append("__\n\nGlory to ")
                 append(guild.name)
                 append(".")
             }).await() }
@@ -459,7 +453,8 @@ object Bot {
     }
 
     private suspend fun handleGoodbyeTask() = coroutineScope {
-        delayUntil(30.minutes)
+        //TODO: delayUntil(30.minutes)
+        delayUntil(3.minutes)
         channel.sendMessage(buildString {
             append("🏳️ Troops, I am afraid our time has come to surrender. ")
             append("Chroma has blown out the west wing, Adam has barged through the southern lookout, and Lexi has dug into the oval office. ")
@@ -485,7 +480,8 @@ object Bot {
 
     private suspend fun handleOpenRegistrationTask() {
         if (remainingDecrees.size < decreePublicCount) {
-            delayUntil(30.minutes)
+            //TODO:delayUntil(30.minutes)
+            delayUntil(3.minutes)
             channel.sendMessage(buildString {
                 append("Troops, STAND GUARD! The corrupt dictators have located us and are rolling up on our flank with tanks and ammunition. ")
                 append("Our brilliant leader ")
@@ -505,14 +501,27 @@ object Bot {
 
         lastDecree?.onStartTask(Task.OPEN_REGISTRATION)
 
+        // pick decrees
+        state.election.decrees += remainingDecrees.shuffled()
+            .filter { it !is VetoDecree || state.selectedDecrees.isNotEmpty() } // hardcode to ensure veto doesn't come up first
+            .take(decreePublicCount)
+            .map { it.name }
+
         // put signup form in elections channel
         val messageData = MessageCreate {
-            content = "The time has come to elect a new leader to bring our nation to glorious greatness! " +
-                    "Over the next half hour, the fearless and noble of you citizens will have the opportunity to run for office. " +
-                    "Attached to this message is a button which will open the form to announce your candidacy.\n\n" +
-                    "For those of you not yet ready to take the reins of power, we still want to hear your voice. " +
-                    "A thread will be created for each candidate to discuss their platform and answer questions from you, the people.\n\n" +
-                    "Vox populi, vox dei."
+            content = buildString {
+                append("The time has come to elect a new leader to bring our nation to glorious greatness! ")
+                append("Over the next half hour, the fearless and noble of you citizens will have the opportunity to run for office. ")
+                append("Attached to this message is a button which will open the form to announce your candidacy. ")
+                append("As Prime Minister, you will pass 1 of $decreePrivateCount decrees that were selected from the following list by your constituents. ")
+                append("Be sure to share your thoughts on them in your campaign.\n\n")
+                for (decree in pendingDecrees) {
+                    append("> **${decree.displayName}**\n")
+                }
+                append("\nFor those of you not yet ready to take the reins of power, we still want to hear your voice. ")
+                append("A thread will be created for each candidate to discuss their platform and answer questions from you, the people.\n\n")
+                append("Vox populi, vox dei.")
+            }
             components += row(signupButton)
         }
 
@@ -523,7 +532,8 @@ object Bot {
 
     private suspend fun handleOpenBallotTask() = coroutineScope {
         // sleep until XX:30
-        delayUntil(30.minutes)
+        // TODO: delayUntil(30.minutes)
+        delayUntil(3.minutes)
 
         lastDecree?.onStartTask(Task.OPEN_BALLOT)
 
@@ -531,32 +541,26 @@ object Bot {
         closeMessage(state.election.signupFormMessage, "signup form")
         state.election.signupFormMessage = 0L
 
-        // pick decrees
-        state.election.decrees += remainingDecrees.shuffled()
-            .filter { it !is VetoDecree || state.selectedDecrees.isNotEmpty() } // hardcode to ensure veto doesn't come up first
-            .take(decreePublicCount)
-            .map { it.name }
-
         // announce ballot
         val electionOptions = state.election.candidates
             .mapNotNull { cand -> try { guild.retrieveMemberById(cand).await() } catch (e: Exception) { null } }
             .map { cand -> SelectOption.of(cand.effectiveName, cand.id) }
         val messageData = MessageCreate {
             content = buildString {
-                append("The election has begun! Attached to this message, you will find the two sections of the ballot.\n")
+                append("The election has begun! Attached to this message, you will find the two sections of the ballot.\n\n")
                 append("The first section is for the election of the next leader of our nation. ")
                 append("As this nation follows the principles of approval voting, you may select all candidates whose platform you")
                 if (electionOptions.isNotEmpty()) {
-                    append(" support.\n")
+                    append(" support.\n\n")
                 } else {
                     append("- _wait, what's that? uhuh. yep. ok got it, i'll let them know. ok, bye._\n")
                     append("It seems that none of you were brave enough to run for office. What a shame. ")
                     append("Not to fear, our elections are protected by contingencies upon contingencies. ")
                     append("The fearless **PRIME_MINISTER_9000** will be stepping in to fulfill the duties of the office until the next election cycle. ")
-                    append("Now, as I was saying-\n")
+                    append("Now, as I was saying-\n\n")
                 }
                 append("The second section is for choosing the decree you wish to see enacted by the new leader. ")
-                append("Only the top three most popular decrees will be considered for enactment, so choose wisely.")
+                append("Only the top $decreePrivateCount most popular decrees will be considered for enactment, so choose wisely.")
             }
             components += listOf(
                 row(StringSelectMenu("vote:candidate") {
@@ -583,7 +587,8 @@ object Bot {
 
     private suspend fun handleCloseBallotTask() = coroutineScope {
         // sleep until XX:40
-        delayUntil(10.minutes)
+        //TODO:delayUntil(10.minutes)
+        delayUntil(3.minutes)
 
         lastDecree?.onStartTask(Task.CLOSE_BALLOT)
 
@@ -604,6 +609,11 @@ object Bot {
             state.election.primeMinister = 0
             state.nextTask = Task.PM_TIMEOUT
             saveState()
+            channel.sendMessage(buildString {
+                append("HEWWO >w< IT IS I, PRIME_MINISTER_9000 UwU~! ")
+                append("I HAVE COME TO FULFILL THE MORAL OBLIGATIONS OF A SITTING PRIME MINISTER SINCE NOBODY ELSE WANTED TO ^.^ ")
+                append("PLEASE ALLOW ME A FEW MINUTES TO DECIDE ON A DECREE \\o/")
+            }).await()
             return@coroutineScope
         }
 
@@ -653,7 +663,8 @@ object Bot {
 
     private suspend fun handleCloseTieBreakTask() = coroutineScope {
         // sleep until XX:45
-        delayUntil(5.minutes)
+        //TODO:delayUntil(5.minutes)
+        delayUntil(3.minutes)
 
         lastDecree?.onStartTask(Task.CLOSE_TIEBREAK)
 
@@ -693,11 +704,11 @@ object Bot {
             append("Through the due and just democratic process, a body of your peers have fairly elected you as Prime Minster of ")
             append(guild.name).append(". ")
             append("The people now call upon you to pass just one law to bring back peace and stability to our great nation. ")
-            append("Your constituents have helped you narrow it down to just two choices, ")
+            append("Your constituents have helped you narrow it down to just two choices, **")
             append(topDecrees[0].displayName)
-            append(" or ")
+            append("** or **")
             append(topDecrees[1].displayName)
-            append(". Please, choose wisely.")
+            append("**. Please, choose wisely.")
         }).await()
 
         // "DM" decree form to winner
@@ -709,7 +720,7 @@ object Bot {
                 append("Your constituents have helped narrow it down to two. ")
                 append("All you need to do now is click below to select which law to enact. ")
                 append("If you fail to do so in the next 10 minutes, I'll make your choice for you.\n\n")
-                append("To help you make your choice, I have some extra information on each decree:\n>>>")
+                append("To help you make your choice, I have some extra information on each decree:\n>>> ")
                 for (decree in topDecrees) {
                     append("**").append(decree.displayName).append(":** ").append(decree.description).append('\n')
                 }
@@ -726,7 +737,8 @@ object Bot {
 
     private suspend fun handlePMTimeoutTask() = coroutineScope {
         // wait until XX:00
-        delayUntil(20.minutes)
+        //TODO:delayUntil(20.minutes)
+        delayUntil(3.minutes)
 
         // check this is still the right task
         // TODO: so if I want to do this every 2 hours still
@@ -751,19 +763,17 @@ object Bot {
 
         launch { channel.sendMessage(buildString {
             if (state.election.primeMinister == 0L) {
-                append("HELLO >w< IT IS I, PRIME_MINISTER_9000 UwU~! ")
-                append("I HAVE COME TO FULFILL THE MORAL OBLIGATIONS OF A SITTING PRIME MINISTER SINCE NOBODY ELSE WANTED TO ^.^ ")
-                append("AS P.M., MY FIRST ACTION IS TO ENACT ")
+                append("OK! ヾ(≧▽≦*)o AS P.M., MY FIRST ACTION IS TO ENACT ")
             } else {
                 append("Your Prime Minister has failed to pass a law, and so as their loyal vice prime minister I have chosen to enact ")
             }
-            append("**")
+            append("__**")
             append(decree.displayName)
             append("**: ")
             append(decree.description)
-            append('\n')
+            append("__\n\n")
             if (state.election.primeMinister == 0L) {
-                append("PLEASE ENJOY \\o/")
+                append("PLEASE ENJOY ☆*: .｡. o(≧▽≦)o .｡.:*☆")
             } else {
                 append("Glory to ")
                 append(guild.name)

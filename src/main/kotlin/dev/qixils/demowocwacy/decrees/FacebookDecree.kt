@@ -1,7 +1,7 @@
 package dev.qixils.demowocwacy.decrees
 
 import dev.minn.jda.ktx.coroutines.await
-import dev.minn.jda.ktx.events.onCommand
+import dev.minn.jda.ktx.events.listener
 import dev.minn.jda.ktx.interactions.commands.Command
 import dev.minn.jda.ktx.interactions.commands.option
 import dev.minn.jda.ktx.interactions.commands.subcommand
@@ -14,6 +14,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 
 class FacebookDecree : Decree(
     "Facebook",
@@ -48,6 +49,7 @@ class FacebookDecree : Decree(
     }
 
     override suspend fun execute(init: Boolean) {
+        Bot.logger.info("facebook")
         Bot.jda.upsertCommand(Command("friends", "Manage your friends list") {
             subcommand("add", "Ask someone to be your friend or accept their request") {
                 option<User>("member", "The member to invite", true)
@@ -59,9 +61,11 @@ class FacebookDecree : Decree(
                 option<User>("member", "The member to unfriend", true)
             }
             subcommand("leaderboard", "Lists the users with the most friends")
-        })
+        }).await()
 
-        Bot.jda.onCommand("friends add") { event -> coroutineScope {
+        // add
+        Bot.jda.listener<SlashCommandInteractionEvent> { event -> coroutineScope {
+            if (event.fullCommandName != "friends add") return@coroutineScope
             val member = event.getOption<User>("member") ?: run {
                 event.reply_("That user is not on ${Bot.guild.name}", ephemeral = true).await()
                 return@coroutineScope
@@ -84,7 +88,9 @@ class FacebookDecree : Decree(
             }
         } }
 
-        Bot.jda.onCommand("friends list") { event -> coroutineScope {
+        // list
+        Bot.jda.listener<SlashCommandInteractionEvent> { event -> coroutineScope {
+            if (event.fullCommandName != "friends list") return@coroutineScope
             val member = event.getOption<User>("member") ?: event.user
             val reply = async { event.deferReply(true).await() }
 
@@ -132,7 +138,7 @@ class FacebookDecree : Decree(
                 }
 
                 append("## Outgoing Requests\n")
-                if (incoming.isEmpty()) {
+                if (outgoing.isEmpty()) {
                     append("You do not have any outgoing friend requests.\n")
                 } else {
                     append("You have outgoing friend requests to ")
@@ -143,7 +149,9 @@ class FacebookDecree : Decree(
             reply.await().editOriginal(content).await()
         } }
 
-        Bot.jda.onCommand("friends remove") { event -> coroutineScope {
+        // remove
+        Bot.jda.listener<SlashCommandInteractionEvent> { event -> coroutineScope {
+            if (event.fullCommandName != "friends remove") return@coroutineScope
             val member = event.getOption<User>("member") ?: run {
                 event.reply_("That user is not on ${Bot.guild.name}", ephemeral = true).await()
                 return@coroutineScope
@@ -163,7 +171,9 @@ class FacebookDecree : Decree(
             }
         }}
 
-        Bot.jda.onCommand("leaderboard") { event -> coroutineScope {
+        // leaderboard
+        Bot.jda.listener<SlashCommandInteractionEvent> { event -> coroutineScope {
+            if (event.fullCommandName != "friends leaderboard") return@coroutineScope
             val reply = async { event.deferReply(true).await() }
             val tally = mutableMapOf<Long, Int>()
             for ((user1, user2) in state.friends) {
@@ -174,9 +184,13 @@ class FacebookDecree : Decree(
                 .sortedByDescending { it.value }
                 .take(10)
             val content = buildString {
-                append("The top ${top.size} users with the most friends:\n")
-                top.forEachIndexed { index, entry ->
-                    append("${index}. <@${entry.key}>, ${entry.value} friends\n")
+                if (tally.isEmpty()) {
+                    append("Nobody has any friends.")
+                } else {
+                    append("The top ${top.size} users with the most friends:\n")
+                    top.forEachIndexed { index, entry ->
+                        append("${index}. <@${entry.key}>, ${entry.value} friends\n")
+                    }
                 }
             }.trimEnd()
             reply.await().editOriginal(content).await()
