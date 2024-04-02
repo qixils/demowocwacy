@@ -8,6 +8,7 @@ import dev.minn.jda.ktx.events.onButton
 import dev.minn.jda.ktx.events.onCommand
 import dev.minn.jda.ktx.events.onStringSelect
 import dev.minn.jda.ktx.interactions.commands.Command
+import dev.minn.jda.ktx.interactions.commands.updateCommands
 import dev.minn.jda.ktx.interactions.components.*
 import dev.minn.jda.ktx.jdabuilder.default
 import dev.minn.jda.ktx.jdabuilder.intents
@@ -296,8 +297,13 @@ object Bot {
             launch { startDecree(decree) }
         }}
 
+        ///////// JDA AWAIT /////////
+        jda.awaitReady()
+
         // list decrees
-        jda.upsertCommand(Command("decrees", "Fetches the list of active decrees")).queue()
+        jda.updateCommands {
+            addCommands(Command("decrees", "Fetches the list of active decrees"))
+        }.submit() // block to ensure we don't accidentally override a command from a later decree
         jda.onCommand("decrees") { event ->
             val decrees = selectedDecrees
             val content = if (decrees.isEmpty())
@@ -312,7 +318,6 @@ object Bot {
         }
 
         // init decrees
-        jda.awaitReady()
         allDecrees = listOf(
             TWOWDecree(),
             UnseriousDecree(),
@@ -593,7 +598,7 @@ object Bot {
 
         // close threads
         launch { channel.threadChannels.forEach { it.manager.setLocked(true).setArchived(true).await() } }
-        launch { state.election.candidates.forEach { guild.removeRoleFromMember(UserSnowflake.fromId(it), candidateRole).await() } }
+        val removeTask = async { state.election.candidates.forEach { guild.removeRoleFromMember(UserSnowflake.fromId(it), candidateRole).await() } }
 
         if (state.election.primeMinister != 0L) {
             guild.modifyMemberRoles(guild.retrieveMemberById(state.election.primeMinister).await(), setOf(pastLeaderRole), setOf(currentLeaderRole)).queue()
@@ -627,6 +632,7 @@ object Bot {
         val sortedVotes = votes.toList().sortedWith(voteSorter)
         val winners = sortedVotes.takeWhile { it.second == sortedVotes.first().second }.map { it.first }
 
+        removeTask.await()
         state.election.candidates.clear()
         state.election.candidateVotes.clear()
 
@@ -669,6 +675,8 @@ object Bot {
 
         // fetch votes
         val votes = mutableMapOf<Long, Int>()
+        for (cand in state.election.tieBreakCandidates)
+            votes[cand] = 0
         for ((voter, candidate) in state.election.tieBreakVotes) {
             if (candidate !in state.election.tieBreakCandidates) {
                 logger.warn("User $voter voted for unknown candidate $candidate")
