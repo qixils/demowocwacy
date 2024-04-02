@@ -21,7 +21,7 @@ class DadDecree : Decree(
             if (event.message.type.isSystem) return@listener
 
             val match = pattern.find(event.message.contentRaw) ?: return@listener
-            event.message.reply_("Hi ${match.groupValues[1]}, I'm ${Bot.jda.selfUser.effectiveName}.").await()
+            event.message.reply_("Hi ${match.groupValues[1].take(500)}, I'm ${Bot.jda.selfUser.effectiveName}.").await()
         }
     }
 }

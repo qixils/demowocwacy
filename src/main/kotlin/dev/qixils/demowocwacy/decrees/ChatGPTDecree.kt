@@ -12,6 +12,7 @@ import dev.minn.jda.ktx.messages.reply_
 import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
 import kotlinx.serialization.Serializable
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import java.util.*
 import kotlin.time.Duration.Companion.seconds
@@ -24,15 +25,8 @@ class ChatGPTDecree : Decree(
 ) {
     private val random = Random()
     private val context = 25
-    private val odds = 20 // as in, 1 in X
+    private val odds = 10 // as in, 1 in X
     private val model = ModelId("gpt-4-0125-preview")
-    private val prompt = ChatMessage(
-        role = ChatRole.System,
-        content = "You are a user chatting in a science, technology, engineering, mathematics, and programming Discord server. " +
-                "You are silly, casual, liberal, queer, furry, and about 21 years old. " +
-                "You primarily crytype and use lowercase letters."
-    )
-    private val promptList = listOf(prompt)
 
     private val openai = OpenAI(
         token = Bot.config.decrees.openai.token,
@@ -41,8 +35,22 @@ class ChatGPTDecree : Decree(
 
     private val messages = mutableMapOf<Long, MutableList<ChatMessage>>()
 
+    private fun getPrompt(channel: GuildChannel): List<ChatMessage> {
+        return listOf(ChatMessage(
+            role = ChatRole.System,
+            content = "You are a user chatting in a science, technology, engineering, mathematics, and programming Discord server. " +
+                    "Specifically, you are currently in the #${channel.name} channel. " +
+                    "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
+                    "You primarily crytype and use lowercase letters, occasionally use markdown, and rarely use emoji. " +
+                    "You additionally have access to the following custom emoticons, which are used much more often than emoji: " +
+                    channel.guild.emojis.joinToString { it.asMention }
+        ))
+    }
+
     override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
+            val channel = event.channel
+            if (channel !is GuildChannel) return@listener
             if (!isApplicableTo(event.message)) return@listener
             if (event.message.type.isSystem) return@listener
             if (event.author.isBot) return@listener
@@ -58,13 +66,16 @@ class ChatGPTDecree : Decree(
             while (msgList.size > context)
                 msgList.removeAt(0)
 
-            if (random.nextInt(odds) != 0) return@listener
+            var odd = odds
+            if (Bot.jda.selfUser.id in event.message.contentRaw)
+                odd /= 2
+            if (random.nextInt(odd) != 0) return@listener
 
             event.channel.sendTyping().queue()
             val completion = try {
                 openai.chatCompletion(ChatCompletionRequest(
                     model = model,
-                    messages = promptList + msgList,
+                    messages = getPrompt(channel) + msgList,
                 ))
             } catch (e: Exception) {
                 Bot.logger.error("Failed to fetch chat completion", e)
@@ -82,7 +93,7 @@ class ChatGPTDecree : Decree(
             }
 
             msgList.add(message)
-            event.message.reply_(content).await()
+            event.message.reply_(content.take(2000)).await()
         }
     }
 }

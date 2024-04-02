@@ -21,7 +21,7 @@ class CaryDecree : Decree(
             if (!isApplicableTo(event.message)) return@listener
             val channel = event.channel
             if (channel !is IWebhookContainer) return@listener
-            if (random.nextInt(100) != 0) return@listener
+            if (random.nextInt(50) != 0) return@listener
 
             val webhook = WebhookDecree.getWebhook(channel)
             webhook.sendMessage("hi guys i'm cary")
