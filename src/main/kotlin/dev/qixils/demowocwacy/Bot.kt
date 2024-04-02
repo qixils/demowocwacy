@@ -203,12 +203,17 @@ object Bot {
                     id = "form:signup:platform",
                     label = "Describe what you would do as prime minister",
                     required = true,
-                    placeholder = "As prime minister of ${event.guild!!.name}, I would enact the decree ___. I would also..."
+                    placeholder = "As prime minister of ${event.guild!!.name}, I would enact the decree ___. I would also...",
+                    requiredLength = 1..1000,
                 )
             }.queue()
         }
         jda.listener<ModalInteractionEvent> { event ->
             if (event.modalId == "form:signup") {
+                if (state.nextTask != Task.OPEN_BALLOT) {
+                    event.reply_("Registration has ended.", ephemeral = true).queue()
+                    return@listener
+                }
                 // double check that the user still isn't a candidate (and is a registered voter)
                 if (event.user.idLong in state.election.candidates) {
                     event.reply_("You are already a candidate!", ephemeral = true).queue()
@@ -342,7 +347,7 @@ object Bot {
             CaryDecree(),
             FalseDemocracyDecree(),
             EgalitarianismDecree(),
-            EmojiDecree(),
+            PalindromeDecree(),
             FacebookDecree(),
             ASMRDecree(),
             SlowmodeDecree(),

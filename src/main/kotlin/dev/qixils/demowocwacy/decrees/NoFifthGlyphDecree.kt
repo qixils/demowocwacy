@@ -18,7 +18,7 @@ class NoFifthGlyphDecree : Decree(
 
             if (!event.member!!.effectiveName.contains('e') && !event.message.contentRaw.contains('e')) return@listener
 
-            event.message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
+            event.message.delete().reason(event.message.id).queueAfter(500, TimeUnit.MILLISECONDS)
         }
     }
 }

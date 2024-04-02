@@ -22,7 +22,7 @@ class R9KDecree : Decree(
             if (content.isEmpty()) return@listener
             if (messages.add(content)) return@listener
 
-            event.message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
+            event.message.delete().reason(event.message.id).queueAfter(500, TimeUnit.MILLISECONDS)
         }
     }
 }

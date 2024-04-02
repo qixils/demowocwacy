@@ -13,7 +13,7 @@ class DyslexiaDecree : WebhookDecree(
     override fun alter(content: String): String {
         return buildString {
             for (char in content) {
-                if (char in set && random.nextInt(10) == 0)
+                if (char in set && random.nextInt(7) == 0)
                     append(set.random())
                 else
                     append(char)

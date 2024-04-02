@@ -19,14 +19,16 @@ class SocialCreditDecree : Decree(
     @OptIn(ExperimentalSerializationApi::class)
     override suspend fun execute(init: Boolean) {
         val leaderboard = withContext(Dispatchers.IO) {
-            Bot.json.decodeFromStream<Map<String, Int>>(javaClass.getResourceAsStream("stars.json")!!)
+            Bot.json.decodeFromStream<Map<String, Int>>(javaClass.getResourceAsStream("/stars.json")!!)
         }
         val roles = Bot.config.decrees.socialCredit.roles
             .mapNotNull { (Bot.guild.getRoleById(it.id) ?: return@mapNotNull null) to it.amount }
         for ((userId, stars) in leaderboard) {
             val role = roles.lastOrNull { it.second <= stars } ?: continue
             try {
-                Bot.guild.addRoleToMember(UserSnowflake.fromId(userId), role.first).await()
+                val id = UserSnowflake.fromId(userId)
+                if (Bot.guild.getMember(id)?.let{ role.first in it.roles } == true) continue // kinda unnecessary ngl
+                Bot.guild.addRoleToMember(id, role.first).await()
             } catch (e: Exception) {
                 Bot.logger.warn("Could not grant star role to $userId")
             }

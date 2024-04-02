@@ -125,7 +125,7 @@ class TuringTestDecree : Decree(
     }
 
     override suspend fun execute(init: Boolean) {
-        Bot.guild.upsertCommand("verify", "Complete a CAPTCHA to validate your humanity")
+        Bot.jda.upsertCommand("verify", "Complete a CAPTCHA to validate your humanity").await()
 
         Bot.jda.listener<MessageReceivedEvent> { event ->
             if (!isApplicableTo(event.message)) return@listener
@@ -137,7 +137,7 @@ class TuringTestDecree : Decree(
                 .flatMap(Message::delete)
                 .queue()
 
-            event.message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
+            event.message.delete().reason(event.message.id).queueAfter(500, TimeUnit.MILLISECONDS)
         }
 
         Bot.jda.listener<SlashCommandInteractionEvent> { event ->
@@ -152,7 +152,7 @@ class TuringTestDecree : Decree(
         Bot.jda.listener<StringSelectInteractionEvent> { event ->
             val captcha = captchas.find { c -> "captcha-${c.id}" == event.component.id } ?: return@listener
             val isSelected = { a: SelectOption -> event.selectedOptions.any { so -> so.value == a.value } }
-            val passed = captcha.correct.all(isSelected) && captcha.incorrect.none { a -> !isSelected(a) } // i think this is probably suboptimal but whatever
+            val passed = captcha.correct.all(isSelected) && captcha.incorrect.none(isSelected) // i think this is probably suboptimal but whatever
             if (passed) {
                 authorized[event.user.idLong] = Instant.now()
                 event.reply_("You have verified your humanity! Congratulations.", ephemeral = true).await()

@@ -43,8 +43,8 @@ abstract class Decree(
             if (channel !is GuildChannel) return false
             if (!Bot.isInGuild(channel)) return false
             if (channel.idLong in Bot.config.protectedChannels) return false
-            if (channel is ICategorizableChannel && channel.parentCategoryIdLong in Bot.config.protectedChannels) return false
-            if (channel is ThreadChannel && channel.parentChannel.idLong in Bot.config.protectedChannels) return false
+            if (channel is ICategorizableChannel && channel.parentCategory?.let { isApplicableTo(it) } == false) return false
+            if (channel is ThreadChannel /*&& !isApplicableTo(channel.parentChannel)*/) return false
             return true
         }
 

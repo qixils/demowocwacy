@@ -1,10 +1,13 @@
 package dev.qixils.demowocwacy.decrees
 
+import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.listener
 import dev.minn.jda.ktx.messages.Embed
 import dev.minn.jda.ktx.messages.send
 import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
+import kotlinx.coroutines.delay
+import net.dv8tion.jda.api.audit.ActionType
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
@@ -43,6 +46,8 @@ class UndeleteDecree : Decree(
         }
         Bot.jda.listener<MessageDeleteEvent> { event ->
             if (event.messageIdLong !in messages) return@listener
+            delay(500)
+            if (Bot.guild.retrieveAuditLogs().type(ActionType.MESSAGE_DELETE).limit(5).await().any { it.reason == event.messageId }) return@listener // attempt to prevent self logging
             val message = messages[event.messageIdLong]!!
             message.channel.send(embeds = listOf(Embed {
                 author {
@@ -55,7 +60,7 @@ class UndeleteDecree : Decree(
                 footer {
                     name = "Services provided by Messages & Decrees Administration"
                 }
-            }))
+            })).await()
         }
     }
 }

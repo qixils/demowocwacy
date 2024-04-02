@@ -20,7 +20,7 @@ class ChaChaSlideDecree : Decree(
         get() = Bot.config.decrees.chaChaSlide.targets.mapNotNull { Bot.guild.getCategoryById(it) }
     private val executor = Executors.newSingleThreadScheduledExecutor()
     private val random = Random()
-    private val range = 1..10 // seconds
+    private val range = 15..180 // seconds
 
     override suspend fun execute(init: Boolean) {
         if (init) {
@@ -45,7 +45,7 @@ class ChaChaSlideDecree : Decree(
     private fun shuffle() = runBlocking {
         try {
             for (target in targets) {
-                Bot.logger.debug("Shuffling $target")
+                Bot.logger.debug("Shuffling {}", target)
                 val action = target.modifyTextChannelPositions()
                 action.shuffleOrder()
                 for (channel in action.currentOrder.toList()) {

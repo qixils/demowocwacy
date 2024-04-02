@@ -22,7 +22,7 @@ class GentlepeopleDecree : Decree(
             if (content.isEmpty()) return@listener
             if ((content[0].isUpperCase() || content[0] in punctuation) && content.last() in punctuation) return@listener
 
-            event.message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
+            event.message.delete().reason(event.message.id).queueAfter(500, TimeUnit.MILLISECONDS)
         }
     }
 }

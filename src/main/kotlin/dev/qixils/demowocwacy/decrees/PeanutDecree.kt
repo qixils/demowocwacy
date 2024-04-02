@@ -6,20 +6,26 @@ import dev.qixils.demowocwacy.Decree
 import kotlinx.serialization.Serializable
 import net.dv8tion.jda.api.Permission
 
+val peanut = "\uD83E\uDD5C"
+
 class PeanutDecree : Decree(
     "Peanuts",
-    "\uD83E\uDD5C",
+    peanut,
     "peanuts",
     true,
 ) {
     override suspend fun execute(init: Boolean) {
-        Bot.guild.publicRole.manager.revokePermissions(Permission.NICKNAME_CHANGE).await()
-        for (member in Bot.guild.members) {
+        if (init) {
+            Bot.guild.publicRole.manager.revokePermissions(Permission.NICKNAME_CHANGE).await()
+        }
+        for (member in Bot.guild.loadMembers().await()) {
+            if (!Bot.guild.selfMember.canInteract(member)) continue
             val original = member.nickname
+            if (original == peanut) continue
             if (original != null) {
                 Bot.state.decrees.peanut.originals[member.idLong] = original
             }
-            member.modifyNickname("\uD83E\uDD5C").await()
+            member.modifyNickname(peanut).await()
         }
     }
 

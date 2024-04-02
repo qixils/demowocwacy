@@ -54,7 +54,7 @@ abstract class WebhookDecree(name: String, emoji: String, description: String) :
 
                     if (filtered == content) return@listener
 
-                    event.message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
+                    event.message.delete().reason(event.message.id).queueAfter(500, TimeUnit.MILLISECONDS)
 
                     if (filtered.isEmpty()) return@listener
 

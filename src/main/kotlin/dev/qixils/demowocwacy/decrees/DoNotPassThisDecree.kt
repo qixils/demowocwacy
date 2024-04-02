@@ -20,7 +20,7 @@ class DoNotPassThisDecree : Decree(
             if (content.isEmpty()) return@listener
             if (content.length == 2000) return@listener
 
-            event.message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
+            event.message.delete().reason(event.message.id).queueAfter(500, TimeUnit.MILLISECONDS)
         }
     }
 }

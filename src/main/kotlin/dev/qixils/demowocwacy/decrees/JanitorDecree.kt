@@ -39,7 +39,7 @@ class JanitorDecree : Decree(
             val count = message.getReaction(event.emoji)?.count ?: return@listener
             if (count < amount) return@listener
 
-            message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
+            message.delete().reason(message.id).queueAfter(500, TimeUnit.MILLISECONDS)
         }
     }
 }
