@@ -35,6 +35,7 @@ class JanitorDecree : Decree(
             if (TimeUtil.getTimeCreated(event.messageIdLong).toInstant().isBefore(start)) return@listener
 
             val message = event.retrieveMessage().await()
+            if (!isApplicableTo(message)) return@listener // extra failsafe, don't delete bot msgs
 
             val count = message.getReaction(event.emoji)?.count ?: return@listener
             if (count < amount) return@listener
