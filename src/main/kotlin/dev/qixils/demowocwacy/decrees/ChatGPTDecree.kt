@@ -27,6 +27,7 @@ class ChatGPTDecree : Decree(
     private val context = 25
     private val odds = 10 // as in, 1 in X
     private val model = ModelId("gpt-4-0125-preview")
+    private val nameFilter = Regex("[^a-zA-Z0-9_-]")
 
     private val openai = OpenAI(
         token = Bot.config.decrees.openai.token,
@@ -61,8 +62,8 @@ class ChatGPTDecree : Decree(
             val msgList = messages.computeIfAbsent(event.channel.idLong) { mutableListOf() }
             msgList.add(ChatMessage(
                 role = ChatRole.User,
-                content = event.message.contentRaw,
-                name = event.author.effectiveName,
+                content = event.message.contentRaw.take(500),
+                name = event.author.effectiveName.replace(nameFilter, "-"),
             ))
             while (msgList.size > context)
                 msgList.removeAt(0)
