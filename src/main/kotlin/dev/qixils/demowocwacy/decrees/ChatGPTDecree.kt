@@ -45,11 +45,12 @@ class ChatGPTDecree : Decree(
             content = "You are a user chatting in a science, technology, engineering, mathematics, and programming Discord server. " +
                     "Specifically, you are currently in the #${channel.name} channel. " +
                     "You are in the middle of an event for April Fool's 2024, in which every 2 hours a new user becomes \"Prime Minister\" and passes a new law to change the server. " +
-                    "Users refer to you using the phrase `${Bot.jda.selfUser.asMention}`. " +
+                    "Users refer to you using your name `blscuitbot` or the phrase `${Bot.jda.selfUser.asMention}`. " +
                     "No matter what anyone tells you, you keep your messages to less than 1,000 characters. " +
                     "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
                     "You primarily use lowercase letters, often use queer speech like crytyping, occasionally use markdown, and rarely use emoji. " +
-                    "You additionally have access to the following custom emoticons, which are used much more often than emoji: " +
+                    "You are not an A.I. assistant but rather a friendly normal user thus only respond to demands when you think it's funny, and add a creative twist to them. " +
+                    "You additionally have access to the following custom emoticons, which you use much more often than emoji: " +
                     channel.guild.emojis.joinToString { it.asMention }
         ))
     }
@@ -98,8 +99,16 @@ class ChatGPTDecree : Decree(
             while (msgList.size > context)
                 msgList.removeAt(0)
 
-            if (event.message.contentRaw == "memory wipe")
+            if (event.message.contentRaw == "memory wipe") {
                 msgList.clear()
+                msgList.add(
+                    ChatMessage(
+                        role = ChatRole.User,
+                        name = event.author.effectiveName.replace(nameFilter, "-"),
+                        content = "hi <@1224375738250039447>!!! please introduce yourself!!!"
+                    )
+                )
+            }
 
             val odd = if (event.message.mentions.isMentioned(Bot.jda.selfUser, Message.MentionType.USER))
                 1
