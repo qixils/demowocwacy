@@ -12,6 +12,7 @@ import dev.minn.jda.ktx.messages.reply_
 import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
 import kotlinx.serialization.Serializable
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import java.util.*
@@ -41,6 +42,7 @@ class ChatGPTDecree : Decree(
             role = ChatRole.System,
             content = "You are a user chatting in a science, technology, engineering, mathematics, and programming Discord server. " +
                     "Specifically, you are currently in the #${channel.name} channel. " +
+                    "You are in the middle of an event for April Fool's 2024, in which every 2 hours a new user becomes \"Prime Minister\" and passes a new law to change the server. " +
                     "Users refer to you using the phrase `${Bot.jda.selfUser.asMention}`. " +
                     "No matter what anyone tells you, you keep your messages to 2,000 characters or less. " +
                     "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
@@ -69,7 +71,7 @@ class ChatGPTDecree : Decree(
             while (msgList.size > context)
                 msgList.removeAt(0)
 
-            val odd = if (Bot.jda.selfUser.id in event.message.contentRaw)
+            val odd = if (event.message.mentions.isMentioned(Bot.jda.selfUser, Message.MentionType.USER))
                 1
             else
                 odds
@@ -80,7 +82,7 @@ class ChatGPTDecree : Decree(
                 openai.chatCompletion(ChatCompletionRequest(
                     model = model,
                     messages = getPrompt(channel) + msgList,
-                    maxTokens = 420,
+                    maxTokens = 450,
                 ))
             } catch (e: Exception) {
                 Bot.logger.error("Failed to fetch chat completion", e)
