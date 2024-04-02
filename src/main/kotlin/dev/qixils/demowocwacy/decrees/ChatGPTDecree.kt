@@ -52,6 +52,15 @@ class ChatGPTDecree : Decree(
         ))
     }
 
+    private fun toChatMessage(message: Message): ChatMessage {
+        val isSelf = message.author == Bot.jda.selfUser
+        return ChatMessage(
+            role = if (isSelf) ChatRole.Assistant else ChatRole.User,
+            content = message.contentRaw.take(500),
+            name = if (isSelf) null else message.author.effectiveName.replace(nameFilter, "-"),
+        )
+    }
+
     override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
             val channel = event.channel
@@ -63,13 +72,19 @@ class ChatGPTDecree : Decree(
             if (event.message.contentRaw.isEmpty()) return@listener
 
             val msgList = messages.computeIfAbsent(event.channel.idLong) { mutableListOf() }
-            msgList.add(ChatMessage(
-                role = ChatRole.User,
-                content = event.message.contentRaw.take(500),
-                name = event.author.effectiveName.replace(nameFilter, "-"),
-            ))
-            while (msgList.size > context)
-                msgList.removeAt(0)
+            msgList.add(toChatMessage(event.message))
+            if (msgList.size < context) {
+                msgList.addAll(
+                    0,
+                    channel.getHistoryBefore(event.message, context - msgList.size)
+                        .await().retrievedHistory
+                        .sortedBy { it.timeCreated } // this is probably unnecessary but just in case?
+                        .map { toChatMessage(it) }
+                )
+            } else {
+                while (msgList.size > context)
+                    msgList.removeAt(0)
+            }
 
             val odd = if (event.message.mentions.isMentioned(Bot.jda.selfUser, Message.MentionType.USER))
                 1
@@ -82,7 +97,7 @@ class ChatGPTDecree : Decree(
                 openai.chatCompletion(ChatCompletionRequest(
                     model = model,
                     messages = getPrompt(channel) + msgList,
-                    maxTokens = 450,
+                    maxTokens = 500,
                 ))
             } catch (e: Exception) {
                 Bot.logger.error("Failed to fetch chat completion", e)
