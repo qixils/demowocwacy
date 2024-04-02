@@ -69,9 +69,10 @@ class ChatGPTDecree : Decree(
             while (msgList.size > context)
                 msgList.removeAt(0)
 
-            var odd = odds
-            if (Bot.jda.selfUser.id in event.message.contentRaw)
-                odd /= 2
+            val odd = if (Bot.jda.selfUser.id in event.message.contentRaw)
+                1
+            else
+                odds
             if (random.nextInt(odd) != 0) return@listener
 
             event.channel.sendTyping().queue()
