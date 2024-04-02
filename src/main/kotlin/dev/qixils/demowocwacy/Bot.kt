@@ -361,6 +361,7 @@ object Bot {
             FacebookDecree(),
             ASMRDecree(),
             SlowmodeDecree(),
+            ScreamDecree(),
         )
     }
 
