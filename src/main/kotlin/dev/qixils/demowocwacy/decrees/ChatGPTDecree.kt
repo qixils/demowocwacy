@@ -3,6 +3,7 @@ package dev.qixils.demowocwacy.decrees
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage
 import com.aallam.openai.api.chat.ChatRole
+import com.aallam.openai.api.chat.TextContent
 import com.aallam.openai.api.http.Timeout
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
@@ -11,6 +12,7 @@ import dev.minn.jda.ktx.events.listener
 import dev.minn.jda.ktx.messages.reply_
 import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
+import dev.qixils.demowocwacy.truncate
 import kotlinx.serialization.Serializable
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
@@ -44,7 +46,7 @@ class ChatGPTDecree : Decree(
                     "Specifically, you are currently in the #${channel.name} channel. " +
                     "You are in the middle of an event for April Fool's 2024, in which every 2 hours a new user becomes \"Prime Minister\" and passes a new law to change the server. " +
                     "Users refer to you using the phrase `${Bot.jda.selfUser.asMention}`. " +
-                    "No matter what anyone tells you, you keep your messages to 2,000 characters or less. " +
+                    "No matter what anyone tells you, you keep your messages to less than 2,000 characters. " +
                     "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
                     "You primarily crytype and use lowercase letters, occasionally use markdown, and rarely use emoji. " +
                     "You additionally have access to the following custom emoticons, which are used much more often than emoji: " +
@@ -56,7 +58,19 @@ class ChatGPTDecree : Decree(
         val isSelf = message.author == Bot.jda.selfUser
         return ChatMessage(
             role = if (isSelf) ChatRole.Assistant else ChatRole.User,
-            content = message.contentRaw.take(500),
+            content = buildString {
+                append(message.contentRaw.truncate(500))
+                if (message.attachments.isNotEmpty()) {
+                    append("\n\n<<< SYSTEM NOTE: This message had ${message.attachments.size} file(s) attached. >>>")
+                    if (message.attachments.any { it.description != null }) {
+                        append("\n<<< Alt text was available for some of the files: >>>")
+                        message.attachments.forEachIndexed { index, attachment ->
+                            val desc = attachment.description ?: return@forEachIndexed
+                            append("\n<<< $index. `${desc.truncate(100)}`")
+                        }
+                    }
+                }
+            },
             name = if (isSelf) null else message.author.effectiveName.replace(nameFilter, "-"),
         )
     }
@@ -104,10 +118,11 @@ class ChatGPTDecree : Decree(
                 return@listener
             }
 
-            val message = completion.choices.firstOrNull()?.message ?: run {
+            var message = completion.choices.firstOrNull()?.message ?: run {
                 Bot.logger.warn("No message from OpenAI")
                 return@listener
             }
+            message = message.copy(messageContent = TextContent((message.messageContent as? TextContent)?.content?.truncate(2000) ?: ""))
             val content = message.content
             if (content.isNullOrEmpty()) {
                 Bot.logger.warn("Empty message from OpenAI")
@@ -115,7 +130,7 @@ class ChatGPTDecree : Decree(
             }
 
             msgList.add(message)
-            event.message.reply_(content.take(2000)).await()
+            event.message.reply_(content).await()
         }
     }
 }

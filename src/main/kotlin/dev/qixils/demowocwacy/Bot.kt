@@ -722,7 +722,7 @@ object Bot {
                 append("We need you to pass a new law to help save our country. ")
                 append("Your constituents have helped narrow it down to two. ")
                 append("All you need to do now is click below to select which law to enact. ")
-                append("If you fail to do so in the next 10 minutes, I'll make your choice for you.\n\n")
+                append("If you fail to do so by the top of the hour, I'll make your choice for you.\n\n")
                 append("To help you make your choice, I have some extra information on each decree:\n>>> ")
                 for (decree in topDecrees) {
                     append("**").append(decree.displayName).append(":** ").append(decree.description).append('\n')
