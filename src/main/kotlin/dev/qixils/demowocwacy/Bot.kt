@@ -520,7 +520,7 @@ object Bot {
             mentions { role(voterRole) }
         }
 
-        state.election.signupFormMessage = channel.sendMessage(messageData).await().idLong
+        state.election.signupFormMessage = channel.sendMessage(messageData).setSuppressedNotifications(true).await().idLong
         state.nextTask = Task.OPEN_BALLOT
         saveState()
     }
