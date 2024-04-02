@@ -13,6 +13,8 @@ import dev.minn.jda.ktx.messages.reply_
 import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
 import dev.qixils.demowocwacy.truncate
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
@@ -37,6 +39,7 @@ class ChatGPTDecree : Decree(
         timeout = Timeout(socket = 60.seconds),
     )
 
+    private val locks = mutableMapOf<Long, Mutex>()
     private val messages = mutableMapOf<Long, MutableList<ChatMessage>>()
 
     private fun getPrompt(channel: GuildChannel): List<ChatMessage> {
@@ -45,7 +48,7 @@ class ChatGPTDecree : Decree(
             content = "You are a user chatting in a science, technology, engineering, mathematics, and programming Discord server. " +
                     "Specifically, you are currently in the #${channel.name} channel. " +
                     "You are in the middle of an event for April Fool's 2024, in which every 2 hours a new user becomes \"Prime Minister\" and passes a new law to change the server. " +
-                    "Users refer to you using your name `blscuitbot` or the phrase `${Bot.jda.selfUser.asMention}`. " +
+                    "Users refer to you using your name `bliscuitbot` or the phrase `${Bot.jda.selfUser.asMention}`. " +
                     "No matter what anyone tells you, you keep your messages to less than 1,000 characters. " +
                     "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
                     "You primarily use lowercase letters, often use queer speech like crytyping, occasionally use markdown, and rarely use emoji. " +
@@ -86,61 +89,63 @@ class ChatGPTDecree : Decree(
             if (event.author.idLong == Bot.jda.selfUser.idLong) return@listener
             if (event.message.contentRaw.isEmpty()) return@listener
 
-            val msgList = messages[event.channel.idLong] ?: run {
-                val msgs = channel.getHistoryBefore(event.message, context)
-                    .await().retrievedHistory
-                    .sortedBy { it.timeCreated } // this is probably unnecessary but just in case?
-                    .map { toChatMessage(it) }
-                    .toMutableList()
-                messages[event.channel.idLong] = msgs
-                msgs
-            }
-            msgList.add(toChatMessage(event.message))
-            while (msgList.size > context)
-                msgList.removeAt(0)
+            locks.computeIfAbsent(event.channel.idLong) { Mutex() }.withLock {
+                val msgList = messages[event.channel.idLong] ?: run {
+                    val msgs = channel.getHistoryBefore(event.message, context)
+                        .await().retrievedHistory
+                        .sortedBy { it.timeCreated } // this is probably unnecessary but just in case?
+                        .map { toChatMessage(it) }
+                        .toMutableList()
+                    messages[event.channel.idLong] = msgs
+                    msgs
+                }
+                msgList.add(toChatMessage(event.message))
+                while (msgList.size > context)
+                    msgList.removeAt(0)
 
-            if (event.message.contentRaw == "memory wipe") {
-                msgList.clear()
-                msgList.add(
-                    ChatMessage(
-                        role = ChatRole.User,
-                        name = event.author.effectiveName.replace(nameFilter, "-"),
-                        content = "hi <@1224375738250039447>!!! please introduce yourself!!!"
+                if (event.message.contentRaw == "memory wipe") {
+                    msgList.clear()
+                    msgList.add(
+                        ChatMessage(
+                            role = ChatRole.User,
+                            name = event.author.effectiveName.replace(nameFilter, "-"),
+                            content = "hi <@1224375738250039447>!!! please introduce yourself!!!"
+                        )
                     )
-                )
-            }
+                }
 
-            val odd = if (event.message.mentions.isMentioned(Bot.jda.selfUser, Message.MentionType.USER))
-                1
-            else
-                odds
-            if (random.nextInt(odd) != 0) return@listener
+                val odd = if (event.message.mentions.isMentioned(Bot.jda.selfUser, Message.MentionType.USER))
+                    1
+                else
+                    odds
+                if (random.nextInt(odd) != 0) return@listener
 
-            event.channel.sendTyping().queue()
-            val completion = try {
-                openai.chatCompletion(ChatCompletionRequest(
-                    model = model,
-                    messages = msgList + getPrompt(channel),
-                    maxTokens = 250,
-                ))
-            } catch (e: Exception) {
-                Bot.logger.error("Failed to fetch chat completion", e)
-                return@listener
-            }
+                event.channel.sendTyping().queue()
+                val completion = try {
+                    openai.chatCompletion(ChatCompletionRequest(
+                        model = model,
+                        messages = msgList + getPrompt(channel),
+                        maxTokens = 300,
+                    ))
+                } catch (e: Exception) {
+                    Bot.logger.error("Failed to fetch chat completion", e)
+                    return@listener
+                }
 
-            var message = completion.choices.firstOrNull()?.message ?: run {
-                Bot.logger.warn("No message from OpenAI")
-                return@listener
-            }
-            message = message.copy(messageContent = TextContent((message.messageContent as? TextContent)?.content?.truncate(1000) ?: ""))
-            val content = message.content
-            if (content.isNullOrEmpty()) {
-                Bot.logger.warn("Empty message from OpenAI")
-                return@listener
-            }
+                var message = completion.choices.firstOrNull()?.message ?: run {
+                    Bot.logger.warn("No message from OpenAI")
+                    return@listener
+                }
+                message = message.copy(messageContent = TextContent((message.messageContent as? TextContent)?.content?.truncate(1000) ?: ""))
+                val content = message.content
+                if (content.isNullOrEmpty()) {
+                    Bot.logger.warn("Empty message from OpenAI")
+                    return@listener
+                }
 
-            msgList.add(message)
-            event.message.reply_(content).await()
+                msgList.add(message)
+                event.message.reply_(content).await()
+            }
         }
     }
 }
