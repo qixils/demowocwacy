@@ -44,7 +44,6 @@ import java.io.File
 import java.time.Duration
 import java.time.Instant
 import kotlin.system.exitProcess
-import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -504,7 +503,7 @@ object Bot {
         // put signup form in elections channel
         val messageData = MessageCreate {
             content = buildString {
-                append("Hmm, well now this government has gotten quite stale as well. That's it, ")
+                append("Hmm, well now this government has gotten quite stale as well. That's it! ${voterRole.asMention}s, ")
                 append("the time has come to elect a new leader to bring our nation to glorious greatness! ")
                 append("Over the next half hour, the fearless and noble of you citizens will have the opportunity to run for office. ")
                 append("Attached to this message is a button which will open the form to announce your candidacy. ")
@@ -518,6 +517,7 @@ object Bot {
                 append("Vox populi, vox dei.")
             }
             components += row(signupButton)
+            mentions { role(voterRole) }
         }
 
         state.election.signupFormMessage = channel.sendMessage(messageData).await().idLong
