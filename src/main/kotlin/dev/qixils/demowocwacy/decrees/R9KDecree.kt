@@ -12,7 +12,7 @@ class R9KDecree : Decree(
     "Ensures every sent message is unique",
     true
 ) {
-    private val messages = mutableSetOf<String>() // TODO: state? probably not
+    private val messages = mutableSetOf<String>()
 
     override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->

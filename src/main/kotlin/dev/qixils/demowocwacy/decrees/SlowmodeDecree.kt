@@ -17,6 +17,7 @@ class SlowmodeDecree : Decree(
     override suspend fun execute(init: Boolean) {
         for (category in categories) {
             for (channel in category.textChannels) {
+                if (channel.idLong in Bot.config.protectedChannels) continue
                 channel.manager.setSlowmode(duration).setDefaultThreadSlowmode(duration).await()
             }
         }
@@ -25,6 +26,7 @@ class SlowmodeDecree : Decree(
     override suspend fun cleanup() {
         for (category in categories) {
             for (channel in category.textChannels) {
+                if (channel.idLong in Bot.config.protectedChannels) continue
                 channel.manager.setSlowmode(0).setDefaultThreadSlowmode(0).await()
             }
         }

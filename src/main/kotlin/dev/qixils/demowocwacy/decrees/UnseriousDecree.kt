@@ -7,7 +7,6 @@ import kotlinx.serialization.Serializable
 import net.dv8tion.jda.api.entities.channel.attribute.ICategorizableChannel
 import net.dv8tion.jda.api.entities.channel.concrete.Category
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
-import net.dv8tion.jda.api.entities.channel.middleman.StandardGuildChannel
 
 class UnseriousDecree : Decree(
     "Embrace #unserious",
@@ -15,18 +14,16 @@ class UnseriousDecree : Decree(
     "Archives all discussion channels in favor of #unserious",
     false
 ) {
+    val unserious get() = Bot.guild.getTextChannelById(Bot.config.decrees.unserious.channel)!!
+
     override suspend fun execute(init: Boolean) {
         val storage: MutableMap<Long, Pair<Long?, Int>> = mutableMapOf()
         val category: Category = Bot.guild.getCategoryById(Bot.config.decrees.unserious.hiddenCategory)!!
-        for (channelId in Bot.config.decrees.unserious.discussionChannels) {
-            // get channel
-            val channel = Bot.guild.getGuildChannelById(channelId)!!
-            if (channel !is StandardGuildChannel) {
-                Bot.logger.warn("Channel $channelId is not categorizable, skipping")
-                continue
-            }
+        for (channel in unserious.parentCategory!!.textChannels) {
+            if (channel.idLong == Bot.config.decrees.unserious.channel) continue
+            if (channel.idLong in Bot.config.protectedChannels) continue
             // store current category and position
-            storage[channelId] = channel.parentCategory?.idLong to (channel.parentCategory?.channels?.filter { it.type.sortBucket == channel.type.sortBucket }?.indexOf(channel) ?: -1)
+            storage[channel.idLong] = channel.parentCategory?.idLong to (channel.parentCategory?.channels?.filter { it.type.sortBucket == channel.type.sortBucket }?.indexOf(channel) ?: -1)
             // set new category
             channel.manager.setParent(category).queue()
         }
@@ -69,8 +66,6 @@ data class UnseriousState(
 data class UnseriousConfig(
     // ID for the Unserious channel
     val channel: Long = 0,
-    // Channel IDs to hide upon enacting the "Embrace #unserious" decree
-    val discussionChannels: List<Long> = emptyList(),
     // ID of the category to hide channels in
     val hiddenCategory: Long = 0,
 )

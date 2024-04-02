@@ -43,8 +43,8 @@ import java.io.File
 import java.time.Duration
 import java.time.Instant
 import kotlin.system.exitProcess
-import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalSerializationApi::class)
 object Bot {
@@ -109,8 +109,8 @@ object Bot {
     /**
      * Gets the most recently passed decree.
      */
-    val lastDecree: Decree
-        get() = selectedDecrees.last()
+    val lastDecree: Decree?
+        get() = selectedDecrees.lastOrNull()
 
     /**
      * Channel in which elections are held.
@@ -187,52 +187,13 @@ object Bot {
         }
         // disable @everyone pings
         MessageRequest.setDefaultMentions(emptySet())
-        // init decrees
-        allDecrees = listOf(
-            TWOWDecree(),
-            UnseriousDecree(),
-            DemoteLexiDecree(),
-            UndeleteDecree(),
-            HTCDecree(),
-            PeanutDecree(),
-            Literally1984Decree(),
-            BlindnessEpidemic(),
-            EmbraceChristianityDecree(),
-            ReverseDecree(),
-            InvertDecree(),
-            TuringTestDecree(),
-            SpeechlessDecree(),
-            ChatGPTDecree(),
-            NoMathDecree(),
-            DeSTEMification(),
-            DyslexiaDecree(),
-            JanitorDecree(),
-            DadDecree(),
-            CloneDecree(),
-            EmbraceDiseaseDecree(),
-            NoFifthGlyphDecree(),
-            GentlepeopleDecree(),
-            R9KDecree(),
-            DoNotPassThisDecree(),
-            VetoDecree(),
-            SocialCreditDecree(),
-            ChaChaSlideDecree(),
-            CommunismDecree(),
-            CaryDecree(),
-            FalseDemocracyDecree(),
-            EgalitarianismDecree(),
-            EmojiDecree(),
-            FacebookDecree(),
-            ASMRDecree(),
-            SlowmodeDecree(),
-        )
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
-           // signing up for office
-            if (!isRegisteredVoter(event.user)) {
-                event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
-                return@onButton
-            }
+            // signing up for office
+//            if (!isRegisteredVoter(event.user)) {
+//                event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
+//                return@onButton
+//            }
             if (event.user.idLong in state.election.candidates) {
                 event.reply_("You are already a candidate!", ephemeral = true).queue()
                 return@onButton
@@ -249,11 +210,12 @@ object Bot {
         }
         jda.listener<ModalInteractionEvent> { event ->
             if (event.modalId == "form:signup") {
+                logger.info(event.modalId)
                 // double check that the user still isn't a candidate (and is a registered voter)
-                if (!isRegisteredVoter(event.user)) {
-                    event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
-                    return@listener
-                }
+//                if (!isRegisteredVoter(event.user)) {
+//                    event.reply_("You must be a registered voter to run for office!", ephemeral = true).queue()
+//                    return@listener
+//                }
                 if (event.user.idLong in state.election.candidates) {
                     event.reply_("You are already a candidate!", ephemeral = true).queue()
                     return@listener
@@ -309,6 +271,7 @@ object Bot {
         }
         // init decree listener
         jda.listener<ButtonInteractionEvent> { event -> coroutineScope {
+            if (event.user.idLong != state.election.primeMinister) return@coroutineScope
             val split = event.button.id?.split(':', limit = 2) ?: return@coroutineScope
             if (split.size < 2) return@coroutineScope
             if (split[0] != "pick-decree") return@coroutineScope
@@ -333,6 +296,48 @@ object Bot {
             launch { event.message.editMessageComponents(event.message.components.map { it.asDisabled() }).await() }
             launch { startDecree(decree) }
         }}
+
+
+        // init decrees
+        jda.awaitReady()
+        allDecrees = listOf(
+            TWOWDecree(),
+            UnseriousDecree(),
+            DemoteLexiDecree(),
+            UndeleteDecree(),
+            HTCDecree(),
+            PeanutDecree(),
+            Literally1984Decree(),
+            BlindnessEpidemic(),
+            EmbraceChristianityDecree(),
+            ReverseDecree(),
+            InvertDecree(),
+            TuringTestDecree(),
+            SpeechlessDecree(),
+            ChatGPTDecree(),
+            NoMathDecree(),
+            DeSTEMification(),
+            DyslexiaDecree(),
+            JanitorDecree(),
+            DadDecree(),
+            CloneDecree(),
+            EmbraceDiseaseDecree(),
+            NoFifthGlyphDecree(),
+            GentlepeopleDecree(),
+            R9KDecree(),
+            DoNotPassThisDecree(),
+            VetoDecree(),
+            SocialCreditDecree(),
+            ChaChaSlideDecree(),
+            CommunismDecree(),
+            CaryDecree(),
+            FalseDemocracyDecree(),
+            EgalitarianismDecree(),
+            EmojiDecree(),
+            FacebookDecree(),
+            ASMRDecree(),
+            SlowmodeDecree(),
+        )
     }
 
     private suspend fun startDecree(decree: Decree) = coroutineScope {
@@ -401,8 +406,6 @@ object Bot {
                 handleSleepTask()
                 return@runBlocking
             }
-
-            jda.awaitReady()
 
             // init active decrees
             selectedDecrees.filter(Decree::persistent).forEach { launch { it.execute(false) } }
@@ -497,9 +500,10 @@ object Bot {
         }
 
         // wait for start of election cycle (top of the hour)
-        delayUntil(1.hours)
+        //TODO: delayUntil(1.hours)
+        delayUntil(1.seconds)
 
-        lastDecree.onStartTask(Task.OPEN_REGISTRATION)
+        lastDecree?.onStartTask(Task.OPEN_REGISTRATION)
 
         // put signup form in elections channel
         val messageData = MessageCreate {
@@ -521,7 +525,7 @@ object Bot {
         // sleep until XX:30
         delayUntil(30.minutes)
 
-        lastDecree.onStartTask(Task.OPEN_BALLOT)
+        lastDecree?.onStartTask(Task.OPEN_BALLOT)
 
         // close signup form
         closeMessage(state.election.signupFormMessage, "signup form")
@@ -581,7 +585,7 @@ object Bot {
         // sleep until XX:40
         delayUntil(10.minutes)
 
-        lastDecree.onStartTask(Task.CLOSE_BALLOT)
+        lastDecree?.onStartTask(Task.CLOSE_BALLOT)
 
         // close ballot
         closeMessage(state.election.ballotFormMessage, "signup form")
@@ -651,7 +655,7 @@ object Bot {
         // sleep until XX:45
         delayUntil(5.minutes)
 
-        lastDecree.onStartTask(Task.CLOSE_TIEBREAK)
+        lastDecree?.onStartTask(Task.CLOSE_TIEBREAK)
 
         // close ballot
         closeMessage(state.election.tieBreakFormMessage, "tie-break form")
@@ -677,7 +681,7 @@ object Bot {
     }
 
     private suspend fun handleWelcomePMTask() = coroutineScope {
-        lastDecree.onStartTask(Task.WELCOME_PM)
+        lastDecree?.onStartTask(Task.WELCOME_PM)
 
         val topDecrees = tallyDecreeVotes()
 
@@ -733,7 +737,7 @@ object Bot {
         if (state.nextTask != Task.PM_TIMEOUT) return@coroutineScope
         if (state.election.decrees.isEmpty()) return@coroutineScope // uhh
 
-        lastDecree.onStartTask(Task.PM_TIMEOUT)
+        lastDecree?.onStartTask(Task.PM_TIMEOUT)
 
         val topDecrees = tallyDecreeVotes()
         val decree = topDecrees.random()
