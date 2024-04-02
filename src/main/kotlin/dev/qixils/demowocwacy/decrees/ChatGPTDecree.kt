@@ -6,6 +6,7 @@ import com.aallam.openai.api.chat.ChatRole
 import com.aallam.openai.api.http.Timeout
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
+import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.listener
 import dev.minn.jda.ktx.messages.reply_
 import dev.qixils.demowocwacy.Bot
@@ -24,7 +25,7 @@ class ChatGPTDecree : Decree(
     private val random = Random()
     private val context = 25
     private val odds = 20 // as in, 1 in X
-    private val model = ModelId("gpt-3.5-turbo-0125")
+    private val model = ModelId("gpt-4-0125-preview")
     private val prompt = ChatMessage(
         role = ChatRole.System,
         content = "You are a user chatting in a science, technology, engineering, mathematics, and programming Discord server. " +
@@ -60,17 +61,28 @@ class ChatGPTDecree : Decree(
             if (random.nextInt(odds) != 0) return@listener
 
             event.channel.sendTyping().queue()
-            val completion = openai.chatCompletion(ChatCompletionRequest(
-                model = model,
-                messages = promptList + msgList,
-            ))
+            val completion = try {
+                openai.chatCompletion(ChatCompletionRequest(
+                    model = model,
+                    messages = promptList + msgList,
+                ))
+            } catch (e: Exception) {
+                Bot.logger.error("Failed to fetch chat completion", e)
+                return@listener
+            }
 
-            val message = completion.choices[0].message
+            val message = completion.choices.firstOrNull()?.message ?: run {
+                Bot.logger.warn("No message from OpenAI")
+                return@listener
+            }
             val content = message.content
-            if (content.isNullOrEmpty()) return@listener
+            if (content.isNullOrEmpty()) {
+                Bot.logger.warn("Empty message from OpenAI")
+                return@listener
+            }
 
             msgList.add(message)
-            event.message.reply_(content)
+            event.message.reply_(content).await()
         }
     }
 }
