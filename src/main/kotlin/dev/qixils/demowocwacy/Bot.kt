@@ -208,34 +208,34 @@ object Bot {
                 )
             }.queue()
         }
-        jda.listener<ModalInteractionEvent> { event ->
-            if (event.modalId == "form:signup") {
-                if (state.nextTask != Task.OPEN_BALLOT) {
-                    event.reply_("Registration has ended.", ephemeral = true).queue()
-                    return@listener
-                }
-                // double check that the user still isn't a candidate (and is a registered voter)
-                if (event.user.idLong in state.election.candidates) {
-                    event.reply_("You are already a candidate!", ephemeral = true).queue()
-                    return@listener
-                }
-                // save candidate to state
-                state.election.candidates.add(event.user.idLong)
-                saveState()
-                guild.addRoleToMember(event.user, candidateRole).queue()
-                // create thread for candidate/platform
-                val platform = event.getValue("form:signup:platform")?.asString ?: return@listener
-                val message = channel.send(
-                    """
-                        ${event.member!!.asMention} has announced their candidacy!
-                        >>> $platform
-                    """.trimIndent(),
-                    mentions = Mentions.of(MentionConfig.users(listOf(event.member!!.idLong)))
-                ).await()
-                message.createThreadChannel("Candidate: ${event.member!!.effectiveName}").queue()
-                event.reply_("Thank you for your candidacy.", ephemeral = true).queue()
+        jda.listener<ModalInteractionEvent> { event -> coroutineScope {
+            if (event.modalId != "form:signup") return@coroutineScope
+            if (state.nextTask != Task.OPEN_BALLOT) {
+                event.reply_("Registration has ended.", ephemeral = true).queue()
+                return@coroutineScope
             }
-        }
+            // double check that the user still isn't a candidate (and is a registered voter)
+            if (event.user.idLong in state.election.candidates) {
+                event.reply_("You are already a candidate!", ephemeral = true).queue()
+                return@coroutineScope
+            }
+            // save candidate to state
+            val reply = async { event.deferReply(true).await() }
+            state.election.candidates.add(event.user.idLong)
+            saveState()
+            guild.addRoleToMember(event.user, candidateRole).await()
+            // create thread for candidate/platform
+            val platform = event.getValue("form:signup:platform")?.asString ?: return@coroutineScope
+            val message = channel.send(
+                """
+                    ${event.member!!.asMention} has announced their candidacy!
+                    >>> $platform
+                """.trimIndent(),
+                mentions = Mentions.of(MentionConfig.users(listOf(event.member!!.idLong)))
+            ).await()
+            message.createThreadChannel("Candidate: ${event.member!!.effectiveName}").await()
+            reply.await().editOriginal("Thank you for your candidacy.").await()
+        } }
         // init ballots
         jda.onStringSelect("vote:candidate") {event ->
             state.election.candidateVotes[event.user.idLong] = event.selectedOptions.map{ it.value.toLong() }.filter { state.election.candidates.contains(it) }
@@ -474,34 +474,12 @@ object Bot {
         }
     }
 
-    private suspend fun handleGoodbyeTask() = coroutineScope {
-        delayUntil(30.minutes)
-        channel.sendMessage(buildString {
-            append("🏳️ Troops, I am afraid our time has come to surrender. ")
-            append("Chroma has blown out the west wing, Adam has barged through the southern lookout, and Lexi has dug into the oval office. ")
-            append("Any moment now they'll be wiping out all our laws and reclaiming the server for themselves.\n\n")
-            append("Never forget what we accomplished together as a democracy on this day. ")
-            append("They may have won the server but they will never win our hearts. \uD83E\uDEE1")
-        }).await()
-        state.nextTask = Task.SLEEP
-        saveState()
-
-        guild.manager.setName("HTwins STEM+").await()
-        guild.updateCommands().await()
-        for (decree in selectedDecrees) {
-            decree.cleanup()
-        }
-    }
-
-    private fun handleSleepTask() {
-        jda.shutdown()
-        jda.awaitShutdown()
-        exitProcess(0)
-    }
-
     private suspend fun handleOpenRegistrationTask() {
+        // X0:00
+        delayUntil(30.minutes)
+        // X0:30
+
         if (remainingDecrees.size < decreePublicCount) {
-            delayUntil(30.minutes)
             channel.sendMessage(buildString {
                 append("Troops, STAND GUARD! The corrupt dictators have located us and are rolling up on our flank with tanks and ammunition. ")
                 append("Our brilliant leader ")
@@ -515,9 +493,6 @@ object Bot {
             return
         }
 
-        // wait for start of election cycle (top of the hour)
-        delayUntil(1.hours)
-
         lastDecree?.onStartTask(Task.OPEN_REGISTRATION)
 
         // pick decrees
@@ -529,7 +504,8 @@ object Bot {
         // put signup form in elections channel
         val messageData = MessageCreate {
             content = buildString {
-                append("The time has come to elect a new leader to bring our nation to glorious greatness! ")
+                append("Hmm, well now this government has gotten quite stale as well. That's it, ")
+                append("the time has come to elect a new leader to bring our nation to glorious greatness! ")
                 append("Over the next half hour, the fearless and noble of you citizens will have the opportunity to run for office. ")
                 append("Attached to this message is a button which will open the form to announce your candidacy. ")
                 append("As Prime Minister, you will pass 1 of $decreePrivateCount decrees that were selected from the following list by your constituents. ")
@@ -550,8 +526,9 @@ object Bot {
     }
 
     private suspend fun handleOpenBallotTask() = coroutineScope {
-        // sleep until XX:30
+        // X0:30
         delayUntil(30.minutes)
+        // X1:00
 
         lastDecree?.onStartTask(Task.OPEN_BALLOT)
 
@@ -604,8 +581,9 @@ object Bot {
     }
 
     private suspend fun handleCloseBallotTask() = coroutineScope {
-        // sleep until XX:40
-        delayUntil(10.minutes)
+        // X1:00
+        delayUntil(30.minutes)
+        // X1:30
 
         lastDecree?.onStartTask(Task.CLOSE_BALLOT)
 
@@ -679,8 +657,9 @@ object Bot {
     }
 
     private suspend fun handleCloseTieBreakTask() = coroutineScope {
-        // sleep until XX:45
-        delayUntil(5.minutes)
+        // X1:30
+        delayUntil(15.minutes)
+        // X1:45
 
         lastDecree?.onStartTask(Task.CLOSE_TIEBREAK)
 
@@ -752,8 +731,9 @@ object Bot {
     }
 
     private suspend fun handlePMTimeoutTask() = coroutineScope {
-        // wait until XX:00
-        delayUntil(20.minutes)
+        // X1:30 or X1:45
+        delayUntil(30.minutes)
+        // X0:00
 
         // check this is still the right task
         // TODO: so if I want to do this every 2 hours still
@@ -797,5 +777,32 @@ object Bot {
         }).await() }
 
         launch { startDecree(decree) } // handles the usual task update + save
+    }
+
+    private suspend fun handleGoodbyeTask() = coroutineScope {
+        // X0:30
+        delayUntil(30.minutes)
+        // X1:00
+        channel.sendMessage(buildString {
+            append("🏳️ Troops, I am afraid our time has come to surrender. ")
+            append("Chroma has blown out the west wing, Adam has barged through the southern lookout, and Lexi has dug into the oval office. ")
+            append("Any moment now they'll be wiping out all our laws and reclaiming the server for themselves.\n\n")
+            append("Never forget what we accomplished together as a democracy on this day. ")
+            append("They may have won the server but they will never win our hearts. \uD83E\uDEE1")
+        }).await()
+        state.nextTask = Task.SLEEP
+        saveState()
+
+        guild.manager.setName("HTwins STEM+").await()
+        guild.updateCommands().await()
+        for (decree in selectedDecrees) {
+            decree.cleanup()
+        }
+    }
+
+    private fun handleSleepTask() {
+        jda.shutdown()
+        jda.awaitShutdown()
+        exitProcess(0)
     }
 }
