@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Webhook
 import net.dv8tion.jda.api.entities.channel.attribute.IWebhookContainer
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
+import java.util.concurrent.TimeUnit
 
 abstract class WebhookDecree(name: String, emoji: String, description: String) : Decree(name, emoji, description, true) {
 
@@ -39,7 +40,7 @@ abstract class WebhookDecree(name: String, emoji: String, description: String) :
             if (listener == null) {
                 listener = Bot.jda.listener<MessageReceivedEvent> { event ->
                     val channel = event.channel
-                    if (!isApplicableTo(channel, event.author)) return@listener
+                    if (!isApplicableTo(event.message)) return@listener
                     if (event.message.type.isSystem) return@listener
                     if (event.message.contentRaw.isEmpty()) return@listener
                     if (channel !is IWebhookContainer) return@listener
@@ -53,7 +54,7 @@ abstract class WebhookDecree(name: String, emoji: String, description: String) :
 
                     if (filtered == content) return@listener
 
-                    event.message.delete().await()
+                    event.message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
 
                     if (filtered.isEmpty()) return@listener
 

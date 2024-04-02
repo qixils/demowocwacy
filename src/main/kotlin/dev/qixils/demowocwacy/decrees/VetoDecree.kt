@@ -81,7 +81,7 @@ class VetoDecree : Decree(
         launch { Bot.pmChannel.send("Indecisiveness will win you no points in the next elections.").await() }
         launch { Bot.channel.send("On behalf of the Prime Minister, I have chosen to repeal **${option.displayName}**.").await() }
         launch { option.cleanup() }
-        launch { Bot.closeMessage(Bot.state.decrees.veto.message, "veto") }
+        launch { Bot.closeMessage(Bot.state.decrees.veto.message, "veto", Bot.pmChannel) }
     }
 }
 

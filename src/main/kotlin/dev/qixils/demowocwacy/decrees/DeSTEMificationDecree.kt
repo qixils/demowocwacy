@@ -20,7 +20,7 @@ class DeSTEMification : Decree(
 
     override suspend fun execute(init: Boolean) {
         val selections = withContext(Dispatchers.IO) {
-            val words = javaClass.getResourceAsStream("words.txt")!!.reader().readLines()
+            val words = javaClass.getResourceAsStream("/words.txt")!!.reader().readLines()
             words.shuffled().take(4)
         }
         val acronym = selections.joinToString("") { it[0].uppercase() }

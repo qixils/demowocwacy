@@ -1,10 +1,10 @@
 package dev.qixils.demowocwacy.decrees
 
-import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.listener
 import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
+import java.util.concurrent.TimeUnit
 
 class EmojiDecree : Decree(
     "Talk Like an Egyptian",
@@ -21,7 +21,7 @@ class EmojiDecree : Decree(
 
     override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
-            if (!isApplicableTo(event.channel, event.author)) return@listener
+            if (!isApplicableTo(event.message)) return@listener
 
             // https://unicode.org/reports/tr51/#Emoji_Properties_and_Data_Files
             // unicode publishes massive text files of all emoji sequences which could be checked against
@@ -31,7 +31,7 @@ class EmojiDecree : Decree(
                         && !Character.isEmojiComponent(it.code)
                         && Character.UnicodeBlock.of(it.code) !in blocks
             }) {
-                event.message.delete().await()
+                event.message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
             }
         }
     }

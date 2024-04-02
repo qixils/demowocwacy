@@ -9,6 +9,7 @@ import dev.minn.jda.ktx.messages.reply_
 import dev.minn.jda.ktx.messages.send
 import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
@@ -17,6 +18,7 @@ import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 data class CAPTCHA(
     val id: String,
@@ -126,12 +128,16 @@ class TuringTestDecree : Decree(
         Bot.guild.upsertCommand("verify", "Complete a CAPTCHA to validate your humanity")
 
         Bot.jda.listener<MessageReceivedEvent> { event ->
-            if (!isApplicableTo(event.channel, event.author)) return@listener
+            if (!isApplicableTo(event.message)) return@listener
             if (event.message.type.isSystem) return@listener
             if (isAuthorized(event.author.idLong)) return@listener
 
-            event.message.delete().await()
-            event.channel.send("${event.author.asMention}: Please type `/verify` to confirm you are human before chatting!").await()
+            event.channel.send("${event.author.asMention}: Please type `/verify` to confirm you are human before chatting!")
+                .delay(Duration.ofSeconds(10))
+                .flatMap(Message::delete)
+                .queue()
+
+            event.message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
         }
 
         Bot.jda.listener<SlashCommandInteractionEvent> { event ->

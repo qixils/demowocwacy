@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent
 import net.dv8tion.jda.api.utils.TimeUtil
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 class JanitorDecree : Decree(
     "Janitor",
@@ -38,7 +39,7 @@ class JanitorDecree : Decree(
             val count = message.getReaction(event.emoji)?.count ?: return@listener
             if (count < amount) return@listener
 
-            message.delete().await()
+            message.delete().queueAfter(500, TimeUnit.MILLISECONDS)
         }
     }
 }

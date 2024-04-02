@@ -5,11 +5,14 @@ import com.typesafe.config.ConfigRenderOptions
 import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.listener
 import dev.minn.jda.ktx.events.onButton
+import dev.minn.jda.ktx.events.onCommand
 import dev.minn.jda.ktx.events.onStringSelect
+import dev.minn.jda.ktx.interactions.commands.Command
 import dev.minn.jda.ktx.interactions.components.*
+import dev.minn.jda.ktx.jdabuilder.default
 import dev.minn.jda.ktx.jdabuilder.intents
-import dev.minn.jda.ktx.jdabuilder.light
 import dev.minn.jda.ktx.messages.*
+import dev.minn.jda.ktx.messages.Mentions
 import dev.minn.jda.ktx.util.SLF4J
 import dev.qixils.demowocwacy.decrees.*
 import kotlinx.coroutines.*
@@ -22,11 +25,9 @@ import kotlinx.serialization.hocon.decodeFromConfig
 import kotlinx.serialization.hocon.encodeToConfig
 import kotlinx.serialization.json.Json
 import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.OnlineStatus
 import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Role
-import net.dv8tion.jda.api.entities.User
-import net.dv8tion.jda.api.entities.UserSnowflake
+import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.entities.emoji.Emoji
@@ -182,14 +183,15 @@ object Bot {
         val configNode = ConfigFactory.parseFileAnySyntax(configFile)
         config = hocon.decodeFromConfig(configNode)
         // build JDA
-        jda = light(config.token, enableCoroutines=true) {
+        jda = default(config.token, enableCoroutines=true) {
             intents += setOf(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MEMBERS)
+            setStatus(OnlineStatus.DO_NOT_DISTURB)
+            setActivity(Activity.customStatus("Overthrowing a government"))
         }
         // disable @everyone pings
         MessageRequest.setDefaultMentions(emptySet())
         // init signup form
         jda.onButton(signupButton.id!!) { event ->
-            logger.info("ye")
             // signing up for office
             if (event.user.idLong in state.election.candidates) {
                 event.reply_("You are already a candidate!", ephemeral = true).queue()
@@ -206,7 +208,6 @@ object Bot {
             }.queue()
         }
         jda.listener<ModalInteractionEvent> { event ->
-            logger.info(event.modalId)
             if (event.modalId == "form:signup") {
                 // double check that the user still isn't a candidate (and is a registered voter)
                 if (event.user.idLong in state.election.candidates) {
@@ -291,6 +292,20 @@ object Bot {
             launch { startDecree(decree) }
         }}
 
+        // list decrees
+        jda.upsertCommand(Command("decrees", "Fetches the list of active decrees")).queue()
+        jda.onCommand("decrees") { event ->
+            val decrees = selectedDecrees
+            val content = if (decrees.isEmpty())
+                "No decrees have yet been passed."
+            else buildString {
+                append("The currently active decrees are:\n>>> ")
+                for (decree in decrees) {
+                    append("**${decree.displayName}**: ${decree.description}\n")
+                }
+            }
+            event.reply_(content, ephemeral = true).await()
+        }
 
         // init decrees
         jda.awaitReady()
@@ -397,12 +412,14 @@ object Bot {
         runBlocking {
             // avoid restarting decrees on accident
             if (state.nextTask == Task.SLEEP) {
-                handleSleepTask()
-                return@runBlocking
+                //TODO:handleSleepTask()
+                //TODO:return@runBlocking
             }
 
             // init active decrees
-            selectedDecrees.filter(Decree::persistent).forEach { launch { it.execute(false) } }
+            selectedDecrees.filter(Decree::persistent)
+                .sortedByDescending { it.priority }
+                .forEach { launch { it.execute(false) } }
 
             // loop
             while (true) {
@@ -426,12 +443,12 @@ object Bot {
         delayUntil(duration.inWholeMilliseconds)
     }
 
-    suspend fun closeMessage(id: Long, name: String) {
+    suspend fun closeMessage(id: Long, name: String, chan: TextChannel = channel) {
         if (id == 0L) {
             logger.warn("Could not find $name message to disable components")
         } else {
             try {
-                val message = channel.retrieveMessageById(id).await()
+                val message = chan.retrieveMessageById(id).await()
                 message.editMessageComponents(message.components.map { it.asDisabled() }).await()
             } catch (e: Exception) {
                 logger.warn("Failed to disable components for $name message", e)
@@ -448,13 +465,13 @@ object Bot {
             Task.WELCOME_PM -> handleWelcomePMTask()
             Task.PM_TIMEOUT -> handlePMTimeoutTask()
             Task.GOODBYE -> handleGoodbyeTask()
-            Task.SLEEP -> handleSleepTask()
+            Task.SLEEP -> delay(100000)//TODO:handleSleepTask()
         }
     }
 
     private suspend fun handleGoodbyeTask() = coroutineScope {
         //TODO: delayUntil(30.minutes)
-        delayUntil(3.minutes)
+        delayUntil(1.minutes)
         channel.sendMessage(buildString {
             append("🏳️ Troops, I am afraid our time has come to surrender. ")
             append("Chroma has blown out the west wing, Adam has barged through the southern lookout, and Lexi has dug into the oval office. ")
@@ -481,13 +498,13 @@ object Bot {
     private suspend fun handleOpenRegistrationTask() {
         if (remainingDecrees.size < decreePublicCount) {
             //TODO:delayUntil(30.minutes)
-            delayUntil(3.minutes)
+            delayUntil(1.minutes)
             channel.sendMessage(buildString {
                 append("Troops, STAND GUARD! The corrupt dictators have located us and are rolling up on our flank with tanks and ammunition. ")
                 append("Our brilliant leader ")
                 append(state.election.primeMinister.takeUnless { it == 0L }?.run { "<@$this>" } ?: "PRIME_MINISTER_9000")
                 append(" will march us into battle. ")
-                append("If through some miracle they broach our walls, I want you all to always remember what we did today.\n")
+                append("If through some miracle they broach our walls, I want you all to always remember what we did today.\n\n")
                 append("Good luck and godspeed, soldiers.")
             }).await()
             state.nextTask = Task.GOODBYE
@@ -533,7 +550,7 @@ object Bot {
     private suspend fun handleOpenBallotTask() = coroutineScope {
         // sleep until XX:30
         // TODO: delayUntil(30.minutes)
-        delayUntil(3.minutes)
+        delayUntil(1.minutes)
 
         lastDecree?.onStartTask(Task.OPEN_BALLOT)
 
@@ -588,7 +605,7 @@ object Bot {
     private suspend fun handleCloseBallotTask() = coroutineScope {
         // sleep until XX:40
         //TODO:delayUntil(10.minutes)
-        delayUntil(3.minutes)
+        delayUntil(1.minutes)
 
         lastDecree?.onStartTask(Task.CLOSE_BALLOT)
 
@@ -597,7 +614,7 @@ object Bot {
         state.election.ballotFormMessage = 0L
 
         // close threads
-        launch { channel.threadChannels.forEach { it.manager.setLocked(true).await() } }
+        launch { channel.threadChannels.forEach { it.manager.setLocked(true).setArchived(true).await() } }
         launch { state.election.candidates.forEach { guild.removeRoleFromMember(UserSnowflake.fromId(it), candidateRole).await() } }
 
         if (state.election.primeMinister != 0L) {
@@ -664,7 +681,7 @@ object Bot {
     private suspend fun handleCloseTieBreakTask() = coroutineScope {
         // sleep until XX:45
         //TODO:delayUntil(5.minutes)
-        delayUntil(3.minutes)
+        delayUntil(1.minutes)
 
         lastDecree?.onStartTask(Task.CLOSE_TIEBREAK)
 
@@ -738,7 +755,7 @@ object Bot {
     private suspend fun handlePMTimeoutTask() = coroutineScope {
         // wait until XX:00
         //TODO:delayUntil(20.minutes)
-        delayUntil(3.minutes)
+        delayUntil(1.minutes)
 
         // check this is still the right task
         // TODO: so if I want to do this every 2 hours still
@@ -755,7 +772,7 @@ object Bot {
         val decree = topDecrees.random()
 
         if (state.election.primeMinister != 0L) {
-            closeMessage(state.election.decreeFormMessage, "decree form") // gets closed in startDecree
+            closeMessage(state.election.decreeFormMessage, "decree form", Bot.pmChannel) // gets closed in startDecree
             launch { channel.sendMessage(buildString {
                 append("I see you are indecisive. Very well. As your loyal vice prime minister, I shall enact a law for you. Good day.")
             }).await() }
@@ -763,7 +780,7 @@ object Bot {
 
         launch { channel.sendMessage(buildString {
             if (state.election.primeMinister == 0L) {
-                append("OK! ヾ(≧▽≦*)o AS P.M., MY FIRST ACTION IS TO ENACT ")
+                append("OK! ヾ(≧▽≦\\*)o AS P.M., MY FIRST ACTION IS TO ENACT ")
             } else {
                 append("Your Prime Minister has failed to pass a law, and so as their loyal vice prime minister I have chosen to enact ")
             }
@@ -773,7 +790,7 @@ object Bot {
             append(decree.description)
             append("__\n\n")
             if (state.election.primeMinister == 0L) {
-                append("PLEASE ENJOY ☆*: .｡. o(≧▽≦)o .｡.:*☆")
+                append("PLEASE ENJOY ☆\\*: .｡. o(≧▽≦)o .｡.:\\*☆")
             } else {
                 append("Glory to ")
                 append(guild.name)

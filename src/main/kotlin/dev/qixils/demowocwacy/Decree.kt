@@ -1,5 +1,6 @@
 package dev.qixils.demowocwacy
 
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.Channel
 import net.dv8tion.jda.api.entities.channel.attribute.ICategorizableChannel
@@ -20,6 +21,9 @@ abstract class Decree(
 
     val displayName: String
         get() = "${emoji.formatted} $name"
+
+    open val priority: Int
+        get() = 0
 
     /**
      * Executes this decree.
@@ -47,6 +51,12 @@ abstract class Decree(
         fun isApplicableTo(channel: Channel, author: User): Boolean {
             if (!isApplicableTo(channel)) return false
             if (author.idLong in Bot.config.protectedUsers) return false
+            return true
+        }
+
+        fun isApplicableTo(message: Message): Boolean {
+            if (message.isWebhookMessage) return false
+            if (!isApplicableTo(message.channel, message.author)) return false
             return true
         }
     }

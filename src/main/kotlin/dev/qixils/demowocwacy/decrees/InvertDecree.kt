@@ -80,15 +80,17 @@ class InvertDecree : Decree(
 
     override suspend fun execute(init: Boolean) {
         invertGuildIcon()
-        for (emoji in Bot.guild.emojis.sortedBy { it.timeCreated }) {
-            if (emoji.isAnimated) continue
-            val inverted = invert(emoji.image)
-            emoji.delete().await()
-            Bot.guild.createEmoji(emoji.name, inverted, *emoji.roles.toTypedArray()).await()
-        }
+//        for (emoji in Bot.guild.emojis.sortedBy { it.timeCreated }) {
+//            if (emoji.isAnimated) continue
+//            val inverted = invert(emoji.image)
+//            emoji.delete().await()
+//            Bot.guild.createEmoji(emoji.name, inverted).await()
+//        }
+        val highestRole = Bot.guild.selfMember.roles.first()
         for (role in Bot.guild.roles) {
             val color = role.color ?: continue
-            role.manager.setColor(invertRGB(color.rgb))
+            if (!highestRole.canInteract(role)) continue
+            role.manager.setColor(invertRGB(color.rgb)).await()
         }
     }
 

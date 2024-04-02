@@ -14,6 +14,8 @@ class EmbraceDiseaseDecree : Decree(
     "Be careful where you cough",
     true
 ) {
+    override val priority: Int
+        get() = 10
     private val pattern = Regex("<@!?(\\d{17,19})>")
     private fun getRole() = Bot.guild.getRoleById(Bot.config.decrees.disease.role)!!
 
@@ -25,15 +27,16 @@ class EmbraceDiseaseDecree : Decree(
             Bot.guild.addRoleToMember(UserSnowflake.fromId(target), getRole()).await()
         }
         Bot.jda.listener<MessageReceivedEvent> { event ->
-            if (!isApplicableTo(event.channel, event.author)) return@listener
+            if (!isApplicableTo(event.message)) return@listener
             val role = getRole()
             if (role !in event.member!!.roles) return@listener
 
             val matches = pattern.findAll(event.message.contentRaw)
             for (match in matches) {
                 val user = UserSnowflake.fromId(match.groupValues[1])
+                if (Bot.guild.getMember(user)?.let { role in it.roles } == true) continue
                 try {
-                    Bot.guild.addRoleToMember(user, role)
+                    Bot.guild.addRoleToMember(user, role).await()
                 } catch (e: Exception) {
                     Bot.logger.warn("Failed to infect user ${user.id}", e)
                 }

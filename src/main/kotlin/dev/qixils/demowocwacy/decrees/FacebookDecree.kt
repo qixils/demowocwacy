@@ -49,7 +49,6 @@ class FacebookDecree : Decree(
     }
 
     override suspend fun execute(init: Boolean) {
-        Bot.logger.info("facebook")
         Bot.jda.upsertCommand(Command("friends", "Manage your friends list") {
             subcommand("add", "Ask someone to be your friend or accept their request") {
                 option<User>("member", "The member to invite", true)

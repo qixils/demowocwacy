@@ -18,8 +18,8 @@ class CaryDecree : Decree(
 
     override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
+            if (!isApplicableTo(event.message)) return@listener
             val channel = event.channel
-            if (!isApplicableTo(channel, event.author)) return@listener
             if (channel !is IWebhookContainer) return@listener
             if (random.nextInt(100) != 0) return@listener
 

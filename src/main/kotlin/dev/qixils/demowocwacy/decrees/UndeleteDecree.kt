@@ -33,7 +33,7 @@ class UndeleteDecree : Decree(
 
     override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
-            if (!isApplicableTo(event.channel, event.author)) return@listener
+            if (!isApplicableTo(event.message)) return@listener
             if (event.message.type.isSystem) return@listener
             messages[event.messageIdLong] = event.message
         }

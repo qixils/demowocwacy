@@ -22,7 +22,7 @@ class CloneDecree : Decree(
 
         Bot.jda.listener<MessageReceivedEvent> { event ->
             val channel = event.channel
-            if (!isApplicableTo(channel, event.author)) return@listener
+            if (!isApplicableTo(event.message)) return@listener
             if (event.message.type.isSystem) return@listener
             if (event.message.contentRaw.isEmpty()) return@listener
             if (channel !is IWebhookContainer) return@listener
