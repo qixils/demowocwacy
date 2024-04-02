@@ -32,6 +32,8 @@ data class RoleConfig(
     val candidate: Long = 0,
     // Role ID for the user that is currently in office
     val currentLeader: Long = 0,
+    // Role ID for the user that got 2nd place
+    val second: Long = 0,
     // Role ID for users that have previously been in office
     val pastLeader: Long = 0,
     // Role ID for familiars

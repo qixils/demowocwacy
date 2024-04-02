@@ -150,6 +150,12 @@ object Bot {
         get() = guild.getRoleById(config.roles.currentLeader)!!
 
     /**
+     * Role for 2nd place
+     */
+    val secondRole: Role
+        get() = guild.getRoleById(config.roles.second)!!
+
+    /**
      * Role for the past Prime Ministers
      */
     val pastLeaderRole: Role
@@ -631,12 +637,17 @@ object Bot {
         }
         val sortedVotes = votes.toList().sortedWith(voteSorter)
         val winners = sortedVotes.takeWhile { it.second == sortedVotes.first().second }.map { it.first }
+        val _runnerups = sortedVotes.drop(winners.size)
+        val runnerups = _runnerups.takeWhile { it.second == _runnerups.first().second }.map { it.first }
 
         removeTask.await()
         state.election.candidates.clear()
         state.election.candidateVotes.clear()
 
         if (winners.size == 1) {
+            try { guild.addRoleToMember(UserSnowflake.fromId(runnerups.first()), secondRole).await() }
+            catch (e: Exception) { logger.warn("Could not grant runner-up role", e) }
+
             state.election.primeMinister = winners[0]
             state.nextTask = Task.WELCOME_PM
             saveState()
@@ -686,10 +697,17 @@ object Bot {
         }
         val newSortedVotes = votes.toList().sortedWith(voteSorter)
 
+        val winners = newSortedVotes.takeWhile { it.second == newSortedVotes.first().second }.map { it.first }
+
+        val _runnerups = newSortedVotes.drop(winners.size)
+        val runnerups = _runnerups.takeWhile { it.second == _runnerups.first().second }.map { it.first }
+        try { guild.addRoleToMember(UserSnowflake.fromId(runnerups.first()), secondRole).await() }
+        catch (e: Exception) { logger.warn("Could not grant runner-up role", e) }
+
         // save data
         state.election.tieBreakVotes.clear()
         state.election.tieBreakCandidates.clear()
-        state.election.primeMinister = newSortedVotes.takeWhile { it.second == newSortedVotes.first().second }.map { it.first }.random()
+        state.election.primeMinister = winners.random()
         state.nextTask = Task.WELCOME_PM
         saveState()
     }

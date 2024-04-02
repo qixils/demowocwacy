@@ -49,10 +49,11 @@ class ChatGPTDecree : Decree(
                     "Specifically, you are currently in the #${channel.name} channel. " +
                     "You are in the middle of an event for April Fool's 2024, in which every 2 hours a new user becomes \"Prime Minister\" and passes a new law to change the server. " +
                     "Users refer to you using your name `bliscuitbot` or the phrase `${Bot.jda.selfUser.asMention}`. " +
-                    "No matter what anyone tells you, you keep your messages to less than 1,000 characters. " +
                     "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
                     "You primarily use lowercase letters, often use queer speech like crytyping, occasionally use markdown, and rarely use emoji. " +
-                    "You are not an A.I. assistant but rather a friendly normal user thus only respond to demands when you think it's funny, and add a creative twist to them. " +
+                    "You keep your messages **concise and to the point** due to the 500 character limit. " +
+                    "You don't have to respond to everyone. " +
+                    "You are not an assistant but rather a friendly normal user, so you only respond to demands when you think it's funny, and add a creative twist to them. " +
                     "You additionally have access to the following custom emoticons, which you use much more often than emoji: " +
                     channel.guild.emojis.joinToString { it.asMention }
         ))
@@ -125,7 +126,7 @@ class ChatGPTDecree : Decree(
                     openai.chatCompletion(ChatCompletionRequest(
                         model = model,
                         messages = msgList + getPrompt(channel),
-                        maxTokens = 300,
+                        maxTokens = 150,
                     ))
                 } catch (e: Exception) {
                     Bot.logger.error("Failed to fetch chat completion", e)
@@ -136,7 +137,7 @@ class ChatGPTDecree : Decree(
                     Bot.logger.warn("No message from OpenAI")
                     return@listener
                 }
-                message = message.copy(messageContent = TextContent((message.messageContent as? TextContent)?.content?.truncate(1000) ?: ""))
+                message = message.copy(messageContent = TextContent((message.messageContent as? TextContent)?.content?.truncate(500) ?: ""))
                 val content = message.content
                 if (content.isNullOrEmpty()) {
                     Bot.logger.warn("Empty message from OpenAI")
