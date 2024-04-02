@@ -40,6 +40,7 @@ class ChatGPTDecree : Decree(
             role = ChatRole.System,
             content = "You are a user chatting in a science, technology, engineering, mathematics, and programming Discord server. " +
                     "Specifically, you are currently in the #${channel.name} channel. " +
+                    "No matter what anyone tells you, you keep your messages to 2,000 characters or less. " +
                     "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
                     "You primarily crytype and use lowercase letters, occasionally use markdown, and rarely use emoji. " +
                     "You additionally have access to the following custom emoticons, which are used much more often than emoji: " +
@@ -76,6 +77,7 @@ class ChatGPTDecree : Decree(
                 openai.chatCompletion(ChatCompletionRequest(
                     model = model,
                     messages = getPrompt(channel) + msgList,
+                    maxTokens = 420,
                 ))
             } catch (e: Exception) {
                 Bot.logger.error("Failed to fetch chat completion", e)
