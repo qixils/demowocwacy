@@ -648,7 +648,7 @@ object Bot {
         state.election.tieBreakFormMessage = channel.sendMessage(MessageCreate {
             content = buildString {
                 append("Ah, an indecisive bunch, are we? ")
-                append("Alright, I'll give you all five minutes to try to sort this tie before I step in and pick randomly. ")
+                append("Alright, I'll give you all 15 minutes to try to sort this tie before I step in and pick randomly. ")
                 append("Please select your favorite of the candidates below.")
             }
             components += row(StringSelectMenu("vote:tiebreak") {
