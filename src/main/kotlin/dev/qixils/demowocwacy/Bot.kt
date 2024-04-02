@@ -44,8 +44,8 @@ import java.io.File
 import java.time.Duration
 import java.time.Instant
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalSerializationApi::class)
 object Bot {
@@ -417,8 +417,8 @@ object Bot {
         runBlocking {
             // avoid restarting decrees on accident
             if (state.nextTask == Task.SLEEP) {
-                //TODO:handleSleepTask()
-                //TODO:return@runBlocking
+                handleSleepTask()
+                return@runBlocking
             }
 
             // init active decrees
@@ -470,13 +470,12 @@ object Bot {
             Task.WELCOME_PM -> handleWelcomePMTask()
             Task.PM_TIMEOUT -> handlePMTimeoutTask()
             Task.GOODBYE -> handleGoodbyeTask()
-            Task.SLEEP -> delay(100000)//TODO:handleSleepTask()
+            Task.SLEEP -> handleSleepTask()
         }
     }
 
     private suspend fun handleGoodbyeTask() = coroutineScope {
-        //TODO: delayUntil(30.minutes)
-        delayUntil(1.minutes)
+        delayUntil(30.minutes)
         channel.sendMessage(buildString {
             append("🏳️ Troops, I am afraid our time has come to surrender. ")
             append("Chroma has blown out the west wing, Adam has barged through the southern lookout, and Lexi has dug into the oval office. ")
@@ -502,8 +501,7 @@ object Bot {
 
     private suspend fun handleOpenRegistrationTask() {
         if (remainingDecrees.size < decreePublicCount) {
-            //TODO:delayUntil(30.minutes)
-            delayUntil(1.minutes)
+            delayUntil(30.minutes)
             channel.sendMessage(buildString {
                 append("Troops, STAND GUARD! The corrupt dictators have located us and are rolling up on our flank with tanks and ammunition. ")
                 append("Our brilliant leader ")
@@ -518,8 +516,7 @@ object Bot {
         }
 
         // wait for start of election cycle (top of the hour)
-        //TODO: delayUntil(1.hours)
-        delayUntil(1.seconds)
+        delayUntil(1.hours)
 
         lastDecree?.onStartTask(Task.OPEN_REGISTRATION)
 
@@ -554,8 +551,7 @@ object Bot {
 
     private suspend fun handleOpenBallotTask() = coroutineScope {
         // sleep until XX:30
-        // TODO: delayUntil(30.minutes)
-        delayUntil(1.minutes)
+        delayUntil(30.minutes)
 
         lastDecree?.onStartTask(Task.OPEN_BALLOT)
 
@@ -609,8 +605,7 @@ object Bot {
 
     private suspend fun handleCloseBallotTask() = coroutineScope {
         // sleep until XX:40
-        //TODO:delayUntil(10.minutes)
-        delayUntil(1.minutes)
+        delayUntil(10.minutes)
 
         lastDecree?.onStartTask(Task.CLOSE_BALLOT)
 
@@ -685,8 +680,7 @@ object Bot {
 
     private suspend fun handleCloseTieBreakTask() = coroutineScope {
         // sleep until XX:45
-        //TODO:delayUntil(5.minutes)
-        delayUntil(1.minutes)
+        delayUntil(5.minutes)
 
         lastDecree?.onStartTask(Task.CLOSE_TIEBREAK)
 
@@ -759,8 +753,7 @@ object Bot {
 
     private suspend fun handlePMTimeoutTask() = coroutineScope {
         // wait until XX:00
-        //TODO:delayUntil(20.minutes)
-        delayUntil(1.minutes)
+        delayUntil(20.minutes)
 
         // check this is still the right task
         // TODO: so if I want to do this every 2 hours still
