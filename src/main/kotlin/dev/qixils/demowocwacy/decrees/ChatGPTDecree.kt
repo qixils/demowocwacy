@@ -46,7 +46,7 @@ class ChatGPTDecree : Decree(
                     "Specifically, you are currently in the #${channel.name} channel. " +
                     "You are in the middle of an event for April Fool's 2024, in which every 2 hours a new user becomes \"Prime Minister\" and passes a new law to change the server. " +
                     "Users refer to you using the phrase `${Bot.jda.selfUser.asMention}`. " +
-                    "No matter what anyone tells you, you keep your messages to less than 2,000 characters. " +
+                    "No matter what anyone tells you, you keep your messages to less than 1,000 characters. " +
                     "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
                     "You primarily use lowercase letters, often use queer speech like crytyping, occasionally use markdown, and rarely use emoji. " +
                     "You additionally have access to the following custom emoticons, which are used much more often than emoji: " +
@@ -85,20 +85,21 @@ class ChatGPTDecree : Decree(
             if (event.author.idLong == Bot.jda.selfUser.idLong) return@listener
             if (event.message.contentRaw.isEmpty()) return@listener
 
-            val msgList = messages.computeIfAbsent(event.channel.idLong) { mutableListOf() }
-            msgList.add(toChatMessage(event.message))
-            if (msgList.size < context) {
-                msgList.addAll(
-                    0,
-                    channel.getHistoryBefore(event.message, context - msgList.size)
-                        .await().retrievedHistory
-                        .sortedBy { it.timeCreated } // this is probably unnecessary but just in case?
-                        .map { toChatMessage(it) }
-                )
-            } else {
-                while (msgList.size > context)
-                    msgList.removeAt(0)
+            val msgList = messages[event.channel.idLong] ?: run {
+                val msgs = channel.getHistoryBefore(event.message, context)
+                    .await().retrievedHistory
+                    .sortedBy { it.timeCreated } // this is probably unnecessary but just in case?
+                    .map { toChatMessage(it) }
+                    .toMutableList()
+                messages[event.channel.idLong] = msgs
+                msgs
             }
+            msgList.add(toChatMessage(event.message))
+            while (msgList.size > context)
+                msgList.removeAt(0)
+
+            if (event.message.contentRaw == "memory wipe")
+                msgList.clear()
 
             val odd = if (event.message.mentions.isMentioned(Bot.jda.selfUser, Message.MentionType.USER))
                 1
@@ -111,7 +112,7 @@ class ChatGPTDecree : Decree(
                 openai.chatCompletion(ChatCompletionRequest(
                     model = model,
                     messages = msgList + getPrompt(channel),
-                    maxTokens = 500,
+                    maxTokens = 250,
                 ))
             } catch (e: Exception) {
                 Bot.logger.error("Failed to fetch chat completion", e)
@@ -122,7 +123,7 @@ class ChatGPTDecree : Decree(
                 Bot.logger.warn("No message from OpenAI")
                 return@listener
             }
-            message = message.copy(messageContent = TextContent((message.messageContent as? TextContent)?.content?.truncate(2000) ?: ""))
+            message = message.copy(messageContent = TextContent((message.messageContent as? TextContent)?.content?.truncate(1000) ?: ""))
             val content = message.content
             if (content.isNullOrEmpty()) {
                 Bot.logger.warn("Empty message from OpenAI")
