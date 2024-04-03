@@ -510,7 +510,7 @@ object Bot {
 
         // pick decrees
         state.election.decrees += remainingDecrees.shuffled()
-            .filter { it !is VetoDecree || state.selectedDecrees.isNotEmpty() } // hardcode to ensure veto doesn't come up first
+            .filter { (it !is VetoDecree && it !is ExecutiveOrderDecree) || state.selectedDecrees.isNotEmpty() } // hardcode to ensure veto doesn't come up first
             .take(decreePublicCount)
             .map { it.name }
 
