@@ -10,13 +10,12 @@ import com.aallam.openai.client.OpenAI
 import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.listener
 import dev.minn.jda.ktx.messages.reply_
-import dev.qixils.demowocwacy.Bot
-import dev.qixils.demowocwacy.Decree
-import dev.qixils.demowocwacy.truncate
+import dev.qixils.demowocwacy.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import java.util.*
@@ -28,11 +27,14 @@ class ChatGPTDecree : Decree(
     "Sustain conversation with advanced A.I. technologies",
     true
 ) {
+    companion object {
+        val nameFilter = Regex("[^a-zA-Z0-9_-]")
+    }
+
     private val random = Random()
     private val context = 25
     private val odds = 10 // as in, 1 in X
     private val model = ModelId("gpt-4-0125-preview")
-    private val nameFilter = Regex("[^a-zA-Z0-9_-]")
 
     private val openai = OpenAI(
         token = Bot.config.decrees.openai.token,
@@ -46,16 +48,18 @@ class ChatGPTDecree : Decree(
         return listOf(ChatMessage(
             role = ChatRole.System,
             content = "You are a user chatting in a science, technology, engineering, mathematics, and programming Discord server. " +
-                    "Specifically, you are currently in the #${channel.name} channel. " +
-                    "You are in the middle of an event for April Fool's 2024, in which every 2 hours a new user becomes \"Prime Minister\" and passes a new law to change the server. " +
-                    "Users refer to you using your name `bliscuitbot` or the phrase `${Bot.jda.selfUser.asMention}`. " +
+                    "Specifically, you are currently in the #${channel.name} channel, whose description is ${(channel as? TextChannel)?.topic ?: "unknown"}. " +
+                    "You are in the middle of an event for April Fool's 2024, in which every 2 hours a new user becomes \"Prime Minister\" and passes a new decree to change the server. " +
+                    "Users refer to you using your name \"bliscuitbot\", or \"bliscuit\" for short. " +
                     "You are silly, casual, liberal, queer, furry, transgender cat, Tumblr user, use she/her pronouns, frequently shitpost, and are about 21 years old. " +
                     "You primarily use lowercase letters, often use queer speech like crytyping, occasionally use markdown, and rarely use emoji. " +
-                    "You keep your messages **concise and to the point** due to the 500 character limit. " +
-                    "You don't have to respond to everyone. " +
-                    "You are not an assistant but rather a friendly normal user, so you only respond to demands when you think it's funny, and add a creative twist to them. " +
+                    "You keep your messages **concise and to the point** due to the 500 character limit. Use your words efficiently. " +
+                    "You don't respond to everyone, as not everyone is talking to you. " +
+                    "As you are a friendly normal user, so you do not respond to harsh demands. " +
                     "You additionally have access to the following custom emoticons, which you use much more often than emoji: " +
-                    channel.guild.emojis.joinToString { it.asMention }
+                    channel.guild.emojis.joinToString(postfix = ".\n") { it.asMention } +
+                    "The currently active decrees are:\n" +
+                    Bot.selectedDecrees.joinToString(separator = "\n") { "> **${it.displayName}**: ${it.description}" }
         ))
     }
 
@@ -64,19 +68,20 @@ class ChatGPTDecree : Decree(
         return ChatMessage(
             role = if (isSelf) ChatRole.Assistant else ChatRole.User,
             content = buildString {
-                append(message.contentRaw.truncate(500))
+                append(message.getDisplayContent(users = UserDisplay.USER, emojis = false).truncate(500))
                 if (message.attachments.isNotEmpty()) {
                     append("\n\n<<< SYSTEM NOTE: This message had ${message.attachments.size} file(s) attached. >>>")
-                    if (message.attachments.any { it.description != null }) {
-                        append("\n<<< Alt text was available for some of the files: >>>")
-                        message.attachments.forEachIndexed { index, attachment ->
-                            val desc = attachment.description ?: return@forEachIndexed
-                            append("\n<<< $index. `${desc.truncate(100)}`")
-                        }
+                    message.attachments.forEachIndexed { index, attachment ->
+                        append("\n<<< $index. ${attachment.fileName} ")
+                        val desc = attachment.description
+                        if (desc == null)
+                            append("(no alt text)")
+                        else
+                            append("`${desc.truncate(100)}`")
                     }
                 }
             },
-            name = if (isSelf) null else message.author.effectiveName.replace(nameFilter, "-"),
+            name = if (isSelf) null else message.author.effectiveName.replace(nameFilter, "_"),
         )
     }
 
@@ -110,7 +115,7 @@ class ChatGPTDecree : Decree(
                         ChatMessage(
                             role = ChatRole.User,
                             name = event.author.effectiveName.replace(nameFilter, "-"),
-                            content = "hi <@1224375738250039447>!!! please introduce yourself!!!"
+                            content = "hi @blscuitbot!!! please introduce yourself!!!"
                         )
                     )
                 }

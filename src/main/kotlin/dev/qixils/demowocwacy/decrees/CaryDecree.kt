@@ -1,7 +1,9 @@
-package dev.qixils.demowocwacy
+package dev.qixils.demowocwacy.decrees
 
 import dev.minn.jda.ktx.coroutines.await
 import dev.minn.jda.ktx.events.listener
+import dev.qixils.demowocwacy.Bot
+import dev.qixils.demowocwacy.Decree
 import dev.qixils.demowocwacy.decrees.base.WebhookDecree
 import net.dv8tion.jda.api.entities.channel.attribute.IWebhookContainer
 import net.dv8tion.jda.api.entities.emoji.Emoji

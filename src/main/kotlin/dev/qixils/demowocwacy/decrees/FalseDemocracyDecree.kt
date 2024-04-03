@@ -1,6 +1,8 @@
-package dev.qixils.demowocwacy
+package dev.qixils.demowocwacy.decrees
 
 import dev.minn.jda.ktx.coroutines.await
+import dev.qixils.demowocwacy.Bot
+import dev.qixils.demowocwacy.Decree
 import kotlinx.serialization.Serializable
 
 class FalseDemocracyDecree : Decree(
