@@ -362,6 +362,7 @@ object Bot {
             ASMRDecree(),
             SlowmodeDecree(),
             ScreamDecree(),
+            ExecutiveOrderDecree(),
         )
     }
 

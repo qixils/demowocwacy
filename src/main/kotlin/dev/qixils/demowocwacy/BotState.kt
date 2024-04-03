@@ -17,6 +17,7 @@ data class DecreeState(
     val unserious: UnseriousState = UnseriousState(),
     val clone: CloneState = CloneState(),
     val veto: VetoState = VetoState(),
+    val executiveOrder: ExecutiveOrderState = ExecutiveOrderState(),
     val chaChaSlide: ChaChaSlideState = ChaChaSlideState(),
     val communism: CommunismState = CommunismState(),
     val egalitarianism: EgalitarianismState = EgalitarianismState(),
