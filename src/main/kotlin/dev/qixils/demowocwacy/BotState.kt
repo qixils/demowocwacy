@@ -24,6 +24,7 @@ data class DecreeState(
     val facebook: FacebookState = FacebookState(),
     val peanut: PeanutState = PeanutState(),
     val janitor: JanitorState = JanitorState(),
+    val pants: PantsState = PantsState(),
 )
 
 enum class Task {

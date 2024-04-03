@@ -52,4 +52,5 @@ data class DecreeConfig(
     val communism: CommunismConfig = CommunismConfig(),
     val falseDemocracy: FalseDemocracyConfig = FalseDemocracyConfig(),
     val slowmode: SlowmodeConfig = SlowmodeConfig(),
+    val pants: PantsConfig = PantsConfig(),
 )

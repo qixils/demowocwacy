@@ -69,7 +69,7 @@ class ExecutiveOrderDecree : Decree(
     }
 
     override suspend fun onStartTask(task: Task) = coroutineScope {
-        if (task != Task.CLOSE_BALLOT) return@coroutineScope
+        if (task != Task.OPEN_REGISTRATION) return@coroutineScope
         if (Bot.state.decrees.executiveOrder.message == 0L) return@coroutineScope
 
         val optionName = Bot.state.decrees.executiveOrder.options.random()

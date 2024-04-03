@@ -69,7 +69,7 @@ class VetoDecree : Decree(
     }
 
     override suspend fun onStartTask(task: Task) = coroutineScope {
-        if (task != Task.CLOSE_BALLOT) return@coroutineScope
+        if (task != Task.OPEN_REGISTRATION) return@coroutineScope
         if (Bot.state.decrees.veto.message == 0L) return@coroutineScope
 
         val optionName = Bot.state.decrees.veto.options.random()

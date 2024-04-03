@@ -363,6 +363,7 @@ object Bot {
             SlowmodeDecree(),
             ScreamDecree(),
             ExecutiveOrderDecree(),
+            PantsDecree(),
         )
     }
 
