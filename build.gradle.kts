@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "1.9.23"
-    kotlin("plugin.serialization") version "1.9.23"
+    kotlin("jvm") version "2.1.20"
+    kotlin("plugin.serialization") version "2.1.20"
     application
 }
 
@@ -19,9 +19,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:${property("serialization.version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${property("serialization.version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${property("coroutines.version")}")
-    implementation("com.aallam.openai:openai-client:3.7.0")
-    runtimeOnly("ch.qos.logback:logback-classic:1.5.3")
-    runtimeOnly("io.ktor:ktor-client-okhttp:2.3.9")
+    implementation("com.aallam.openai:openai-client:4.0.1")
+    runtimeOnly("ch.qos.logback:logback-classic:1.5.18")
+    runtimeOnly("io.ktor:ktor-client-okhttp:3.1.2")
 }
 
 tasks.test {
