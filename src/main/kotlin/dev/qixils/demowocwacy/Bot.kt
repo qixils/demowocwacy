@@ -15,6 +15,8 @@ import dev.minn.jda.ktx.jdabuilder.intents
 import dev.minn.jda.ktx.messages.*
 import dev.minn.jda.ktx.messages.Mentions
 import dev.minn.jda.ktx.util.SLF4J
+import dev.minn.jda.ktx.util.SLF4J.getValue
+import dev.qixils.demowocwacy.Bot.stateFile
 import dev.qixils.demowocwacy.decrees.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -337,7 +339,7 @@ object Bot {
             ReverseDecree(),
             InvertDecree(),
             TuringTestDecree(),
-            SpeechlessDecree(),
+//            SpeechlessDecree(),
             ChatGPTDecree(),
             NoMathDecree(),
             DeSTEMification(),
@@ -346,6 +348,7 @@ object Bot {
             DadDecree(),
             CloneDecree(),
             EmbraceDiseaseDecree(),
+            NoFirstGlyphDecree(),
             NoFifthGlyphDecree(),
             GentlepeopleDecree(),
             R9KDecree(),
@@ -364,6 +367,11 @@ object Bot {
             ScreamDecree(),
             ExecutiveOrderDecree(),
             PantsDecree(),
+            BronyDecree(),
+            FruitGameDecree(),
+            IsThatDecree(),
+            BalloonGoombaDecree(),
+            BupDecree(),
         )
     }
 
@@ -576,7 +584,7 @@ object Bot {
                     if (electionOptions.isNotEmpty()) {
                         addOptions(electionOptions)
                     } else {
-                        option("PRIME_MINISTER_9000", "PRIME_MINISTER_9000", "I WILL MAKE HTSTEM GREAT AGAIN", Emoji.fromUnicode("\uD83E\uDD16"), true)
+                        option("PRIME_MINISTER_9000", "PRIME_MINISTER_9000", "I WILL MAKE STYS GREAT AGAIN", Emoji.fromUnicode("\uD83E\uDD16"), true)
                         isDisabled = true
                     }
                     setRequiredRange(1, SelectMenu.OPTIONS_MAX_AMOUNT)
@@ -693,7 +701,7 @@ object Bot {
             votes[cand] = 0
         for ((voter, candidate) in state.election.tieBreakVotes) {
             if (candidate !in state.election.tieBreakCandidates) {
-                logger.warn("User $voter voted for unknown candidate $candidate")
+                logger.warn("User $voter voted for unknown tied candidate $candidate")
                 continue
             }
             votes[candidate] = votes[candidate]!! + 1
@@ -814,7 +822,7 @@ object Bot {
         // X1:00
         channel.sendMessage(buildString {
             append("🏳️ Troops, I am afraid our time has come to surrender. ")
-            append("Chroma has blown out the west wing, Adam has barged through the southern lookout, and Lexi has dug into the oval office. ")
+            append("Hans has blown out the west wing, Lexi has barged through the southern lookout, and Sky has dug into the oval office. ")
             append("Any moment now they'll be wiping out all our laws and reclaiming the server for themselves.\n\n")
             append("Never forget what we accomplished together as a democracy on this day. ")
             append("They may have won the server but they will never win our hearts. \uD83E\uDEE1")
@@ -822,7 +830,7 @@ object Bot {
         state.nextTask = Task.SLEEP
         saveState()
 
-        guild.manager.setName("HTwins STEM+").await()
+        guild.manager.setName("Stabyourself").await()
         guild.updateCommands().await()
         for (decree in selectedDecrees) {
             decree.cleanup()

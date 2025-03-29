@@ -43,9 +43,7 @@ data class RoleConfig(
 @Serializable
 data class DecreeConfig(
     val unserious: UnseriousConfig = UnseriousConfig(),
-    val htc: HTCConfig = HTCConfig(),
     val openai: OpenAIConfig = OpenAIConfig(),
-    val stem: STEMConfig = STEMConfig(),
     val disease: EmbraceDiseaseConfig = EmbraceDiseaseConfig(),
     val socialCredit: SocialCreditConfig = SocialCreditConfig(),
     val chaChaSlide: ChaChaSlideConfig = ChaChaSlideConfig(),
@@ -53,4 +51,6 @@ data class DecreeConfig(
     val falseDemocracy: FalseDemocracyConfig = FalseDemocracyConfig(),
     val slowmode: SlowmodeConfig = SlowmodeConfig(),
     val pants: PantsConfig = PantsConfig(),
+    val fruit: FruitConfig = FruitConfig(),
+    val bup: BupConfig = BupConfig(),
 )

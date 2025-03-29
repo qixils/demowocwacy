@@ -9,9 +9,9 @@ import net.dv8tion.jda.api.entities.channel.concrete.Category
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 
 class UnseriousDecree : Decree(
-    "Embrace #unserious",
+    "Embrace #shamless-chamber",
     "\uD83D\uDE08",
-    "Archives all discussion channels in favor of #unserious",
+    "Archives all discussion channels in favor of #shamless-chamber",
     false
 ) {
     val unserious get() = Bot.guild.getTextChannelById(Bot.config.decrees.unserious.channel)!!

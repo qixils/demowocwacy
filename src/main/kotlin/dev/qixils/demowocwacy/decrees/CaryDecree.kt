@@ -12,8 +12,8 @@ import java.util.*
 
 class CaryDecree : Decree(
     "Return of the King",
-    Emoji.fromCustom("carypog", 849418300777299988L, false),
-    "Reinstate Cary as the King",
+    Emoji.fromCustom("bowser", 599686941725949983L, false),
+    "Reinstate Murk as the King",
     true
 ) {
     private val random = Random()
@@ -26,9 +26,9 @@ class CaryDecree : Decree(
             if (random.nextInt(50) != 0) return@listener
 
             val webhook = WebhookDecree.getWebhook(channel)
-            webhook.sendMessage("hi guys i'm cary")
-                .setUsername("carykh")
-                .setAvatarUrl("https://qixils.us-east-1.linodeobjects.com/carykh.png")
+            webhook.sendMessage("hi guys i'm murk")
+                .setUsername("Murk")
+                .setAvatarUrl("https://qixils.us-east-1.linodeobjects.com/murk.png")
                 .await()
         }
     }

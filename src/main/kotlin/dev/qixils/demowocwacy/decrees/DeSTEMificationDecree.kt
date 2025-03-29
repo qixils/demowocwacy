@@ -5,45 +5,22 @@ import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
 
 class DeSTEMification : Decree(
-    "Stexit",
-    "\uD83E\uDDEA",
-    "Out with the STEM, in with the...",
+    "Whatyourself?",
+    "🗡️",
+    "Stabbing is so 2012, it's time for...",
     false
 ) {
-    private val science = Bot.guild.getTextChannelById(Bot.config.decrees.stem.science)!!
-    private val technology = Bot.guild.getTextChannelById(Bot.config.decrees.stem.technology)!!
-    private val engineering = Bot.guild.getTextChannelById(Bot.config.decrees.stem.engineering)!!
-    private val mathematics = Bot.guild.getTextChannelById(Bot.config.decrees.stem.mathematics)!!
-
     override suspend fun execute(init: Boolean) {
-        val selections = withContext(Dispatchers.IO) {
-            val words = javaClass.getResourceAsStream("/words.txt")!!.reader().readLines()
-            words.shuffled().take(4)
+        val selection = withContext(Dispatchers.IO) {
+            val words = javaClass.getResourceAsStream("/verbs.txt")!!.reader().readLines()
+            words.shuffled().first()
         }
-        val acronym = selections.joinToString("") { it[0].uppercase() }
-        Bot.guild.manager.setName("HTwins $acronym+").await()
-        science.manager.setName(selections[0]).await()
-        technology.manager.setName(selections[1]).await()
-        engineering.manager.setName(selections[2]).await()
-        mathematics.manager.setName(selections[3]).await()
+        Bot.guild.manager.setName("${selection}yourself").await()
     }
 
     override suspend fun cleanup() {
-        Bot.guild.manager.setName("HTwins STEM+").await()
-        science.manager.setName("science").await()
-        technology.manager.setName("technology").await()
-        engineering.manager.setName("engineering").await()
-        mathematics.manager.setName("mathematics").await()
+        Bot.guild.manager.setName("Stabyourself").await()
     }
 }
-
-@Serializable
-data class STEMConfig(
-    val science: Long = 0,
-    val technology: Long = 0,
-    val engineering: Long = 0,
-    val mathematics: Long = 0,
-)

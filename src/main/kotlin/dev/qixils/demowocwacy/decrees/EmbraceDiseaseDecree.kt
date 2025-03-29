@@ -11,7 +11,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 class EmbraceDiseaseDecree : Decree(
     "Embrace Disease",
     "\uD83E\uDDA0",
-    "Be careful where you cough lest you spread Chroma-19",
+    "Be careful where you cough lest you spread Baloomba-19",
     true
 ) {
     override val priority: Int

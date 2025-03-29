@@ -5,9 +5,9 @@ import dev.qixils.demowocwacy.Bot
 import dev.qixils.demowocwacy.Decree
 
 class DemoteLexiDecree : Decree(
-    "Demote Lexi",
+    "Demote Sky",
     "\u2692\uFE0F",
-    "Vanquishes the final staff member of a bygone era",
+    "Ousts the one who started this all",
     false,
 ) {
     override suspend fun execute(init: Boolean) {

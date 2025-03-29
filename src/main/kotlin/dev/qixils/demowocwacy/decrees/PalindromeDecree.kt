@@ -15,6 +15,7 @@ class PalindromeDecree : Decree(
     override suspend fun execute(init: Boolean) {
         Bot.jda.listener<MessageReceivedEvent> { event ->
             if (!isApplicableTo(event.message)) return@listener
+            if (event.message.type.isSystem) return@listener
 
             val content = event.message.contentRaw
             if (content == content.reversed()) return@listener

@@ -6,6 +6,7 @@ import dev.qixils.demowocwacy.Decree
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import java.util.concurrent.TimeUnit
 
+// TODO: this could probably be automod
 class GentlepeopleDecree : Decree(
     "Proper Gentlepeople",
     "\uD83E\uDDD1\u200D\uD83D\uDCBC",

@@ -70,6 +70,8 @@ A skeleton configuration will be generated at first run at `bot.conf`. The token
 }
 ```
 
+Also be sure to create AutoMod rules to accompany the AutoMod decrees.
+
 ### Running
 
 A gradle task is configured to run the application.
