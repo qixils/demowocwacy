@@ -17,7 +17,7 @@ class PalindromeDecree : Decree(
             if (!isApplicableTo(event.message)) return@listener
             if (event.message.type.isSystem) return@listener
 
-            val content = event.message.contentRaw
+            val content = event.message.contentRaw.lowercase()
             if (content == content.reversed()) return@listener
 
             event.message.delete().reason(event.message.id).queueAfter(500, TimeUnit.MILLISECONDS)

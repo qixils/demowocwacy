@@ -8,12 +8,17 @@ import dev.qixils.demowocwacy.Decree
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Webhook
 import net.dv8tion.jda.api.entities.channel.attribute.IWebhookContainer
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import java.util.concurrent.TimeUnit
 
-abstract class WebhookDecree(name: String, emoji: String, description: String) : Decree(name, emoji, description, true) {
+abstract class WebhookDecree : Decree {
+
+    constructor(name: String, emoji: String, description: String) : super(name, emoji, description, true)
+    constructor(name: String, emoji: Emoji, description: String) : super(name, emoji, description, true)
 
     companion object {
+        val processed = mutableSetOf<Long>()
         private const val webhookName = "demowocracy"
         private val webhooks = mutableMapOf<Long, Webhook>()
         private var listener: CoroutineEventListener? = null
@@ -35,6 +40,13 @@ abstract class WebhookDecree(name: String, emoji: String, description: String) :
                 .await()
         }
 
+        fun applyFilters(text: String): String {
+            var filtered = text
+            for (filter in filters)
+                filtered = filter.alter(filtered) ?: filtered
+            return filtered
+        }
+
         fun addFilter(decree: WebhookDecree) {
             filters.add(decree)
             if (listener == null) {
@@ -48,12 +60,11 @@ abstract class WebhookDecree(name: String, emoji: String, description: String) :
                     val webhook = getWebhook(channel)
 
                     val content = event.message.contentRaw
-                    var filtered = content
-                    for (filter in filters)
-                        filtered = filter.alter(filtered) ?: filtered
+                    val filtered = applyFilters(content)
 
                     if (filtered == content) return@listener
 
+                    processed.add(event.message.idLong)
                     event.message.delete().reason(event.message.id).queueAfter(500, TimeUnit.MILLISECONDS)
 
                     if (filtered.isEmpty()) return@listener

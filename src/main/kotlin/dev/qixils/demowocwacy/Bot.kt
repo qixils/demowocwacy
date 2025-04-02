@@ -16,6 +16,7 @@ import dev.minn.jda.ktx.messages.*
 import dev.minn.jda.ktx.messages.Mentions
 import dev.minn.jda.ktx.util.SLF4J
 import dev.minn.jda.ktx.util.SLF4J.getValue
+import dev.qixils.demowocwacy.Bot.saveState
 import dev.qixils.demowocwacy.Bot.stateFile
 import dev.qixils.demowocwacy.decrees.*
 import kotlinx.coroutines.*
@@ -177,7 +178,7 @@ object Bot {
 
     /**
      * The state of the bot.
-     * This is loaded from [stateFile] and saved to it when changed.
+     * This is loaded from [stateFile] and should be saved to it with [saveState] when changed.
      */
     val state: BotState = if (stateFile.exists()) cbor.decodeFromByteArray(stateFile.readBytes()) else BotState()
 
@@ -354,7 +355,7 @@ object Bot {
             R9KDecree(),
             DoNotPassThisDecree(),
             VetoDecree(),
-            SocialCreditDecree(),
+//            SocialCreditDecree(),
             ChaChaSlideDecree(),
             CommunismDecree(),
             CaryDecree(),
@@ -372,6 +373,7 @@ object Bot {
             IsThatDecree(),
             BalloonGoombaDecree(),
             BupDecree(),
+            PortalDecree(),
         )
     }
 
@@ -525,8 +527,12 @@ object Bot {
         // put signup form in elections channel
         val messageData = MessageCreate {
             content = buildString {
-                append("Hmm, well now this government has gotten quite stale as well. That's it! ${voterRole.asMention}s, ")
-                append("the time has come to elect a new leader to bring our nation to glorious greatness! ")
+                if (selectedDecrees.isNotEmpty()) {
+                    append("Hmm, well now this government has gotten quite stale as well. That's it! ${voterRole.asMention}s, ")
+                    append("the time has come to elect a new leader to bring our nation to glorious greatness! ")
+                } else {
+                    append("The time has come to elect a new leader to bring our nation to glorious greatness! ")
+                }
                 append("Over the next half hour, the fearless and noble of you citizens will have the opportunity to run for office. ")
                 append("Attached to this message is a button which will open the form to announce your candidacy. ")
                 append("As Prime Minister, you will pass 1 of $decreePrivateCount decrees that were selected from the following list by your constituents. ")
@@ -564,7 +570,7 @@ object Bot {
             .map { cand -> SelectOption.of(cand.effectiveName, cand.id) }
         val messageData = MessageCreate {
             content = buildString {
-                append("The election has begun! Attached to this message, you will find the two sections of the ballot.\n\n")
+                append("The election has begun ${voterRole.asMention}! Attached to this message, you will find the two sections of the ballot.\n\n")
                 append("The first section is for the election of the next leader of our nation. ")
                 append("As this nation follows the principles of approval voting, you may select all candidates whose platform you")
                 if (electionOptions.isNotEmpty()) {
@@ -595,6 +601,7 @@ object Bot {
                     }
                 })
             )
+            mentions { role(voterRole) }
         }
 
         state.election.ballotFormMessage = channel.sendMessage(messageData).await().idLong

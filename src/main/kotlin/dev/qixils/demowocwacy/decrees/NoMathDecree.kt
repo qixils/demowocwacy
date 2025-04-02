@@ -7,10 +7,10 @@ class NoMathDecree : WebhookDecree(
     "*\uFE0F⃣",
     "Censor all discussion of mathematics"
 ) {
-    private val pattern = Regex("[0-9]")
+    private val pattern = Regex("[0-9+/*-]")
 
     override fun alter(content: String): String? {
-        val censored = pattern.replace(content, "*")
+        val censored = pattern.replace(content, "·")
         if (content == censored) return null
         return censored
     }

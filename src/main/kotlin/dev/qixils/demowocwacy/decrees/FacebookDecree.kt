@@ -44,7 +44,7 @@ class FacebookDecree : Decree(
         try {
             member.openPrivateChannel().await().sendMessage(content).await()
         } catch (ignored: Exception) {
-            Bot.logger.warn("Failed to message $member")
+            Bot.logger.warn("Failed to message $member\n$content")
         }
     }
 

@@ -26,9 +26,10 @@ class EmbraceDiseaseDecree : Decree(
             Bot.guild.addRoleToMember(UserSnowflake.fromId(target), getRole()).await()
         }
         Bot.jda.listener<MessageReceivedEvent> { event ->
-            //if (!isApplicableTo(event.message)) return@listener
+            val member = event.member ?: return@listener
+
             val role = getRole()
-            if (role !in event.member!!.roles) return@listener
+            if (role !in member.roles) return@listener
 
             val mentions = event.message.mentions.users.toMutableList()
 

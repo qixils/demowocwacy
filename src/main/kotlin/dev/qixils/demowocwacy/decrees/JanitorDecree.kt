@@ -23,7 +23,7 @@ class JanitorDecree : Decree(
             Bot.state.decrees.janitor.start = value.toString()
         }
     private val react = Emoji.fromUnicode("\uD83D\uDDD1\uFE0F")
-    private val amount = 10
+    private val amount = 3
 
     override suspend fun execute(init: Boolean) {
         if (init) {
